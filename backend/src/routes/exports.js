@@ -4,11 +4,11 @@ import { z } from 'zod';
 import { config } from '../config.js';
 import { query } from '../db.js';
 import { badRequest, notFound, unauthorized } from '../errors.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, scopeOf } from '../middleware/auth.js';
 import { parse } from '../middleware/validate.js';
 import { buildFormDocx } from '../services/export/docx.js';
 import { buildFormPdf } from '../services/export/pdf.js';
-import { buildRekapDocx, buildRekapPdf, buildRekapXlsx } from '../services/export/rekap.js';
+import { buildRekapDocx, buildRekapPdf, buildRekapXlsx, rekapPreview } from '../services/export/rekap.js';
 import { buildFormXlsx } from '../services/export/xlsx.js';
 
 const r = Router();
@@ -44,6 +44,11 @@ r.post('/ticket', requireAuth, async (req, res) => {
   res.json({ path: `/api/exports/file?t=${encodeURIComponent(token)}` });
 });
 
+/** Ringkasan rekap untuk layar (mingguan / bulanan / tahunan) sebelum diunduh. */
+r.get('/rekap-preview', requireAuth, async (req, res) => {
+  res.json(await rekapPreview(req.query, req.user));
+});
+
 r.get('/file', async (req, res) => {
   let p;
   try {
@@ -52,11 +57,16 @@ r.get('/file', async (req, res) => {
     throw unauthorized('Tautan unduhan sudah kedaluwarsa. Kembali ke aplikasi lalu unduh lagi.');
   }
   if (p.typ !== 'export') throw unauthorized();
-  const u = (await query('SELECT id, role, is_active FROM users WHERE id = $1', [p.uid])).rows[0];
+  const u = (await query('SELECT id, role, site_id, is_active FROM users WHERE id = $1', [p.uid])).rows[0];
   if (!u?.is_active) throw unauthorized();
 
   let out;
   if (p.kind === 'p2h') {
+    const scope = scopeOf(u);
+    if (scope != null) {
+      const f = (await query('SELECT site_id FROM p2h_forms WHERE id = $1', [p.id])).rows[0];
+      if (!f || f.site_id !== scope) throw notFound('P2H tidak ditemukan.');
+    }
     out = await FORM_BUILD[p.format](p.id);
     if (!out) throw notFound('P2H tidak ditemukan.');
   } else {

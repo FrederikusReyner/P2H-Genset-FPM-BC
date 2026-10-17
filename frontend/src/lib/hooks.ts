@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ApiError, api, onSlow, qs } from './api';
 import { loadSnapshot, saveSnapshot } from './cache';
-import type { Dashboard, Finding, Meta, Notice, P2HListItem, Unit } from './types';
+import type { Dashboard, Finding, Meta, Notice, P2HListItem, RekapPreview, Unit } from './types';
 
 /** Ambil dari server; kalau tidak ada sinyal, pakai salinan terakhir yang tersimpan di HP. */
 async function withSnapshot<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
@@ -67,7 +67,7 @@ export interface HistoryFilter {
   result?: string;
   q?: string;
   mine?: boolean;
-  unsigned?: boolean;
+  unverified?: boolean;
   limit?: number;
   offset?: number;
 }
@@ -77,9 +77,18 @@ export function useHistory(f: HistoryFilter) {
     queryKey: ['history', f],
     queryFn: () =>
       api.get<{ items: P2HListItem[]; total: number; limit: number; offset: number }>(
-        `/api/p2h${qs({ ...f, mine: f.mine ? 1 : undefined, unsigned: f.unsigned ? 1 : undefined })}`,
+        `/api/p2h${qs({ ...f, mine: f.mine ? 1 : undefined, unverified: f.unverified ? 1 : undefined })}`,
       ),
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useRekapPreview(period: 'week' | 'month' | 'year', date: string, siteId: number | null) {
+  return useQuery({
+    queryKey: ['rekap', period, date, siteId],
+    queryFn: () => api.get<RekapPreview>(`/api/exports/rekap-preview${qs({ period, date, site_id: siteId })}`),
+    placeholderData: keepPreviousData,
+    staleTime: 20_000,
   });
 }
 

@@ -41,7 +41,7 @@ export async function notifyEvent({ kind, severity, title, body, siteId, unitId,
        JOIN users u ON u.id = ps.user_id
       WHERE u.is_active
         AND ($1::int IS NULL OR u.id <> $1)
-        AND (u.notif_site_ids IS NULL OR $2::int IS NULL OR $2 = ANY (u.notif_site_ids))
+        AND ($2::int IS NULL OR (u.role = 'admin' AND (u.notif_site_ids IS NULL OR $2 = ANY (u.notif_site_ids))) OR (u.role <> 'admin' AND u.site_id = $2))
         AND (u.notif_mode = 'all' OR $3::boolean)`,
     [actorUserId ?? null, siteId ?? null, !!isFinding],
   );

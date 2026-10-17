@@ -13,7 +13,7 @@ import type { ChecklistSection, Role, Settings, UserRow } from '../lib/types';
    Pengguna
    ===================================================================== */
 
-const ROLES: Role[] = ['mekanik', 'pengawas', 'manajemen', 'admin'];
+const ROLES: Role[] = ['teknisi', 'pengawas', 'admin'];
 
 async function copyText(s: string) {
   try {
@@ -38,7 +38,7 @@ export function UsersPage() {
 
   const list = useMemo(() => {
     const k = filter.trim().toLowerCase();
-    return (q.data?.items ?? []).filter((u) => !k || `${u.nrp} ${u.name} ${u.role}`.toLowerCase().includes(k));
+    return (q.data?.items ?? []).filter((u) => !k || `${u.nrp} ${u.name} ${u.role} ${u.company ?? ''} ${u.job_title ?? ''}`.toLowerCase().includes(k));
   }, [q.data, filter]);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['users'] });
@@ -56,7 +56,7 @@ export function UsersPage() {
 
       <label className="searchbox">
         <Icon name="search" size={18} />
-        <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Cari nama atau ID karyawan…" aria-label="Cari pengguna" />
+        <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Cari nama, No SID, atau perusahaan…" aria-label="Cari pengguna" />
       </label>
 
       {q.isLoading && <Spinner />}
@@ -68,7 +68,7 @@ export function UsersPage() {
           <thead>
             <tr>
               <th>Nama</th>
-              <th>ID karyawan</th>
+              <th>No SID</th>
               <th>Peran</th>
               <th className="hide-on-phone">Site</th>
               <th className="hide-on-phone">Masuk terakhir</th>
@@ -81,11 +81,11 @@ export function UsersPage() {
               <tr key={u.id} className="is-click" onClick={() => setEdit(u)} tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setEdit(u)}>
                 <td>
                   <b>{u.name}</b>
-                  {u.job_title && <div className="small muted">{u.job_title}</div>}
+                  {(u.company || u.job_title) && <div className="small muted">{[u.company, u.job_title].filter(Boolean).join(' · ')}</div>}
                 </td>
                 <td className="mono">{u.nrp}</td>
                 <td>{ROLE_LABEL[u.role]}</td>
-                <td className="hide-on-phone">{sites.find((s) => s.id === u.site_id)?.name ?? 'Semua'}</td>
+                <td className="hide-on-phone">{u.role === 'admin' ? 'Semua site' : sites.find((s) => s.id === u.site_id)?.name ?? <span className="stop-text">belum ada</span>}</td>
                 <td className="hide-on-phone small">{u.last_login_at ? ago(u.last_login_at) : <span className="muted">belum pernah</span>}</td>
                 <td className="hide-on-phone num">{u.devices}</td>
                 <td>
@@ -136,7 +136,7 @@ function CredSheet({ cred, onClose }: { cred: { title: string; lines: { nrp: str
           <button
             type="button"
             className="btn btn--ghost"
-            onClick={async () => toast.push({ title: (await copyText(`ID karyawan\tNama\tPassword awal\n${text}`)) ? 'Disalin (siap ditempel ke Excel)' : 'Tidak bisa menyalin', tone: 'info' })}
+            onClick={async () => toast.push({ title: (await copyText(`No SID\tNama\tPassword awal\n${text}`)) ? 'Disalin (siap ditempel ke Excel)' : 'Tidak bisa menyalin', tone: 'info' })}
           >
             <Icon name="copy" size={16} /> Salin semua
           </button>
@@ -155,7 +155,7 @@ function CredSheet({ cred, onClose }: { cred: { title: string; lines: { nrp: str
       <table className="table table--tight">
         <thead>
           <tr>
-            <th>ID karyawan</th>
+            <th>No SID</th>
             <th>Nama</th>
             <th>Password awal</th>
           </tr>
@@ -188,7 +188,7 @@ function UserSheet({
   onSaved: (cred?: { title: string; lines: { nrp: string; name: string; pw: string }[] }) => Promise<unknown>;
 }) {
   const toast = useToast();
-  const [f, setF] = useState({ nrp: '', name: '', role: 'mekanik' as Role, site_id: '' as string | number, job_title: '', phone: '', password: '', is_active: true });
+  const [f, setF] = useState({ nrp: '', name: '', company: '', role: 'teknisi' as Role, site_id: '' as string | number, job_title: '', phone: '', password: '', is_active: true });
   const [loaded, setLoaded] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -197,8 +197,8 @@ function UserSheet({
   if (target !== loaded) {
     setLoaded(target);
     setErr(null);
-    if (target === 'new') setF({ nrp: '', name: '', role: 'mekanik', site_id: sites[0]?.id ?? '', job_title: '', phone: '', password: '', is_active: true });
-    else if (target) setF({ nrp: target.nrp, name: target.name, role: target.role, site_id: target.site_id ?? '', job_title: target.job_title ?? '', phone: target.phone ?? '', password: '', is_active: target.is_active });
+    if (target === 'new') setF({ nrp: '', name: '', company: '', role: 'teknisi', site_id: sites[0]?.id ?? '', job_title: '', phone: '', password: '', is_active: true });
+    else if (target) setF({ nrp: target.nrp, name: target.name, company: target.company ?? '', role: target.role, site_id: target.site_id ?? '', job_title: target.job_title ?? '', phone: target.phone ?? '', password: '', is_active: target.is_active });
   }
   const up = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
   const isNew = target === 'new';
@@ -208,7 +208,19 @@ function UserSheet({
     setBusy(true);
     setErr(null);
     try {
-      const common = { name: f.name.trim(), role: f.role, site_id: f.site_id === '' ? null : Number(f.site_id), job_title: f.job_title.trim() || null, phone: f.phone.trim() || null };
+      if (f.role !== 'admin' && f.site_id === '') {
+        setErr('Pilih site untuk teknisi / pengawas. Mereka hanya akan melihat data di site itu.');
+        setBusy(false);
+        return;
+      }
+      const common = {
+        name: f.name.trim(),
+        role: f.role,
+        site_id: f.role === 'admin' || f.site_id === '' ? null : Number(f.site_id),
+        company: f.company.trim() || null,
+        job_title: f.job_title.trim() || null,
+        phone: f.phone.trim() || null,
+      };
       if (isNew) {
         const r = await api.post<{ item: UserRow; initial_password: string }>('/api/users', { nrp: f.nrp.trim(), ...common, password: f.password || undefined });
         toast.push({ title: 'Akun dibuat', tone: 'ok' });
@@ -266,11 +278,17 @@ function UserSheet({
       >
         <div className="stack">
           <div className="grid2">
-            <Field label="ID karyawan (untuk masuk)" htmlFor="x-nrp" hint={isNew ? 'Huruf / angka, tanpa spasi' : undefined}>
+            <Field label="No SID (untuk masuk)" htmlFor="x-nrp" hint={isNew ? 'Huruf / angka, tanpa spasi' : undefined}>
               <input id="x-nrp" className="input mono" value={f.nrp} onChange={(e) => up('nrp', e.target.value)} disabled={!isNew} autoCapitalize="none" data-autofocus />
             </Field>
             <Field label="Nama lengkap" htmlFor="x-name">
               <input id="x-name" className="input" value={f.name} onChange={(e) => up('name', e.target.value)} />
+            </Field>
+            <Field label="Perusahaan" htmlFor="x-company">
+              <input id="x-company" className="input" value={f.company} onChange={(e) => up('company', e.target.value)} placeholder="mis. PT Mutiara Tanjung Lestari" />
+            </Field>
+            <Field label="Jabatan" htmlFor="x-job">
+              <input id="x-job" className="input" value={f.job_title} onChange={(e) => up('job_title', e.target.value)} placeholder="mis. Electrician" />
             </Field>
             <Field label="Peran" htmlFor="x-role">
               <select id="x-role" className="input" value={f.role} onChange={(e) => up('role', e.target.value as Role)} disabled={!!self}>
@@ -281,18 +299,21 @@ function UserSheet({
                 ))}
               </select>
             </Field>
-            <Field label="Site" htmlFor="x-site">
-              <select id="x-site" className="input" value={f.site_id} onChange={(e) => up('site_id', e.target.value)}>
-                <option value="">Semua site</option>
+            <Field label="Site" htmlFor="x-site" hint={f.role === 'admin' ? 'Admin melihat semua site.' : 'Hanya melihat data di site ini.'}>
+              <select id="x-site" className="input" value={f.role === 'admin' ? '' : f.site_id} onChange={(e) => up('site_id', e.target.value)} disabled={f.role === 'admin'}>
+                {f.role === 'admin' ? (
+                  <option value="">Semua site</option>
+                ) : (
+                  <option value="" disabled>
+                    Pilih site…
+                  </option>
+                )}
                 {sites.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
                 ))}
               </select>
-            </Field>
-            <Field label="Jabatan" htmlFor="x-job">
-              <input id="x-job" className="input" value={f.job_title} onChange={(e) => up('job_title', e.target.value)} placeholder="mis. Electrician" />
             </Field>
             <Field label="No. HP" htmlFor="x-hp">
               <input id="x-hp" className="input" inputMode="tel" value={f.phone} onChange={(e) => up('phone', e.target.value)} />
@@ -310,7 +331,7 @@ function UserSheet({
             </label>
           )}
           <div className="small muted">
-            <b>Peran:</b> Mekanik = isi P2H · Pengawas = isi + tanda tangan + tutup temuan · Manajemen = lihat saja · Admin = kelola semuanya.
+            <b>Peran:</b> Teknisi = isi P2H dan perbarui temuan · Pengawas = periksa dan verifikasi P2H (tanda tangan) dan perbarui temuan · Admin = kelola akun, unit, daftar cek, dan pengaturan, melihat semua site. Teknisi dan pengawas hanya melihat site-nya.
           </div>
           {err && (
             <div className="banner banner--stop" role="alert">
@@ -330,9 +351,10 @@ function UserSheet({
 interface ParsedRow {
   nrp: string;
   name: string;
+  company: string;
+  job_title: string;
   role: string;
   site: string;
-  job_title: string;
   password: string;
 }
 
@@ -341,8 +363,9 @@ function parsePaste(text: string): ParsedRow[] {
     .split(/\r?\n/)
     .map((l) => l.split(/\t|;/).map((c) => c.trim()))
     .filter((r) => r.some(Boolean));
-  if (rows.length && /nrp|id\s*karyawan|^id$/i.test(rows[0][0] ?? '') && /nama/i.test(rows[0][1] ?? '')) rows.shift();
-  return rows.map((r) => ({ nrp: r[0] ?? '', name: r[1] ?? '', role: r[2] ?? '', site: r[3] ?? '', job_title: r[4] ?? '', password: r[5] ?? '' }));
+  if (rows.length && /sid|nrp|id\s*karyawan|^id$/i.test(rows[0][0] ?? '') && /nama/i.test(rows[0][1] ?? '')) rows.shift();
+  // urutan kolom: No SID, Nama, Perusahaan, Jabatan, Peran, Site, Password (boleh kosong)
+  return rows.map((r) => ({ nrp: r[0] ?? '', name: r[1] ?? '', company: r[2] ?? '', job_title: r[3] ?? '', role: r[4] ?? '', site: r[5] ?? '', password: r[6] ?? '' }));
 }
 
 function ImportSheet({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: (lines: { nrp: string; name: string; pw: string }[]) => Promise<unknown> }) {
@@ -399,16 +422,16 @@ function ImportSheet({ open, onClose, onDone }: { open: boolean; onClose: () => 
       <div className="stack">
         <ol className="steps">
           <li>
-            Di Excel, siapkan kolom: <b>ID karyawan · Nama · Peran · Site · Jabatan</b> (kolom ke-6 password boleh kosong).
+            Di Excel, siapkan kolom: <b>No SID · Nama · Perusahaan · Jabatan · Peran · Site</b> (kolom ke-7 password boleh kosong). Template ada di folder <b>docs</b>.
           </li>
           <li>
             Blok semua barisnya, <b>salin (Ctrl+C)</b>, lalu <b>tempel (Ctrl+V)</b> di kotak bawah.
           </li>
           <li>
-            Peran: mekanik / pengawas / manajemen / admin (juga boleh "electrician", "foreman", "spv", "pja"). Site: Binungan, Suaran, Gurimbang, Lati, Sambarata.
+            Peran: teknisi / pengawas / admin (juga boleh "electrician", "foreman", "spv"). Site: Binungan, Suaran, Gurimbang, Lati, Sambarata. Site wajib untuk teknisi dan pengawas.
           </li>
         </ol>
-        <textarea className="input textarea mono" rows={8} value={text} onChange={(e) => { setText(e.target.value); setRes(null); }} placeholder={'12345\tAndi\tmekanik\tSuaran\tElectrician\n12346\tBudi\tpengawas\tBinungan\tForeman'} aria-label="Tempel dari Excel" />
+        <textarea className="input textarea mono" rows={8} value={text} onChange={(e) => { setText(e.target.value); setRes(null); }} placeholder={'12345\tAndi\tPT Mutiara Tanjung Lestari\tElectrician\tteknisi\tSuaran\n12346\tBudi\tPT Berau Coal\tForeman\tpengawas\tBinungan'} aria-label="Tempel dari Excel" />
         {rows.length > 0 && <div className="small muted">{rows.length} baris terbaca.</div>}
         {err && (
           <div className="banner banner--stop" role="alert">

@@ -16,6 +16,7 @@ import './styles/tokens.css';
 import './styles/base.css';
 import './styles/ui.css';
 import './styles/app.css';
+import './styles/revisi.css';
 
 import App from './App';
 import { ApiError } from './lib/api';

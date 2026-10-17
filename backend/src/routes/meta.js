@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { config } from '../config.js';
 import { query } from '../db.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, scopeOf } from '../middleware/auth.js';
 import { PARAMS } from '../params.js';
 import { getSettings } from '../services/settings.js';
 import { currentShift, wita } from '../time.js';
@@ -40,9 +40,10 @@ export async function loadChecklist(client, { includeInactive = false } = {}) {
   });
 }
 
-r.get('/', requireAuth, async (_req, res) => {
+r.get('/', requireAuth, async (req, res) => {
+  const scope = scopeOf(req.user); // teknisi / pengawas hanya diberi site-nya sendiri
   const [sites, checklist, settings] = await Promise.all([
-    query('SELECT id, code, name, job_site, sort_order FROM sites WHERE is_active ORDER BY sort_order, id'),
+    query(`SELECT id, code, name, job_site, sort_order FROM sites WHERE is_active ${scope != null ? 'AND id = $1' : ''} ORDER BY sort_order, id`, scope != null ? [scope] : []),
     loadChecklist(null),
     getSettings(),
   ]);

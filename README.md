@@ -1,158 +1,134 @@
 # P2H Genset - Berau Coal / MTL
 
-Aplikasi web (bisa dipasang di HP seperti aplikasi biasa) untuk P2H genset: 5 site (Binungan, Suaran, Gurimbang, Lati, Sambarata), 25 genset, 30 butir cek, dashboard, unduh PDF / Word / Excel, dan notifikasi ke HP.
+Aplikasi web (bisa dipasang di HP seperti aplikasi biasa) untuk P2H genset: 5 site (Binungan, Suaran, Gurimbang, Lati, Sambarata), 25 genset, 30 butir cek. Ada dashboard, foto kerusakan, verifikasi pengawas, rekap mingguan / bulanan / tahunan, unduh PDF / Word / Excel, dan notifikasi ke HP.
 
-> Panduan Word yang lengkap belum selesai. README ini adalah panduan sementara. Semua perintah dan isian di bawah sudah dicoba di komputer ini. Yang BELUM dicoba: pasang sungguhan di Render/Vercel (butuh akun Anda) dan tes di iPhone / Android asli.
+> Panduan Word yang lengkap ada di folder `docs` (Panduan Deploy dan Panduan Singkat Pemakai). README ini ringkasannya. Semua perintah dan isian di bawah sudah dicoba di komputer ini. Yang BELUM dicoba: pasang sungguhan di Render / Aiven (butuh akun Anda), dan tes di iPhone / Android asli.
+
+## Susunan sistem
+
+```
+HP / komputer  -->  Render (satu layanan: tampilan web + server)  -->  Aiven (database PostgreSQL)
+                                                                         ^
+                                                    DBeaver (hanya untuk melihat isi database)
+```
+
+Tampilan web dan server dipasang **bersama dalam satu layanan di Render**, jadi tidak perlu Vercel dan tidak perlu mengatur CORS. Database ada di **Aiven**.
 
 ## Isi folder
 
 | Folder / berkas | Isinya |
 |---|---|
-| `backend/` | Server (Express 5 + PostgreSQL). Dipasang di **Render**. |
-| `frontend/` | Tampilan web / aplikasi HP (React + Vite, PWA). Dipasang di **Vercel**. |
-| `docs/Template-Impor-Akun.xlsx` | Template Excel untuk membuat banyak akun sekaligus. |
-| `docs/Query-DBeaver.sql` | 13 query (hanya membaca) untuk dibuka di DBeaver: rekap, temuan terbuka, genset belum P2H, dll. |
+| `backend/` | Server (Express 5 + PostgreSQL). Juga menyajikan tampilan web hasil build. |
+| `frontend/` | Tampilan web / aplikasi HP (React + Vite, PWA). |
+| `docs/` | Panduan Word, `Template-Impor-Akun.xlsx`, `Query-DBeaver.sql` (15 query hanya-baca). |
+| `Jalankan-Lokal.bat` | Coba aplikasi di komputer sendiri (klik dua kali). |
+| `Hentikan-Lokal.bat` | Hentikan uji coba di komputer sendiri. |
+| `Buat-Kunci.bat` | Membuat kunci rahasia untuk server (JWT dan VAPID). |
 
-## Yang Anda perlukan
+## Peran dan akses
 
-- Program di komputer: **Node.js 22 atau lebih baru (LTS)**, **Git** (atau GitHub Desktop), **DBeaver Community** (hanya untuk melihat isi database).
-- Akun gratis: **GitHub**, **Render**, **Vercel** (daftar dengan akun GitHub supaya mudah).
-- Email asli untuk `VAPID_SUBJECT` (dipakai layanan notifikasi).
-- Izin dari IT / atasan memakai layanan cloud di luar negeri untuk data P2H.
+| Peran | Bisa apa | Melihat |
+|---|---|---|
+| **Teknisi** | Mengisi P2H (foto wajib bila ada yang Rusak / Perbaiki), memperbarui temuan, unduh | Hanya **site-nya** |
+| **Pengawas** | Memeriksa lalu **memverifikasi** P2H (tanda tangan), memperbarui temuan, unduh | Hanya **site-nya** |
+| **Admin** | Membuat akun, mengelola unit genset, daftar cek, pengaturan | **Semua site** |
+
+Akun dibuat oleh admin: **Nama, Perusahaan, Jabatan, No SID** (No SID dipakai untuk masuk), peran, dan **site** (wajib untuk teknisi dan pengawas). Banyak akun sekaligus: isi `docs/Template-Impor-Akun.xlsx`, salin, lalu tempel di Kelola > Pengguna > Impor dari Excel (di HP lewat Akun saya).
+
+Aturan P2H:
+
+- Butir **Rusak** atau **Perbaiki** wajib ada **catatan dan minimal 1 foto** (maksimal 3 per butir). Tanpa foto, P2H tidak bisa dikirim. Foto dikecilkan otomatis di HP dan ikut tercetak di PDF / Word / Excel (lampiran foto).
+- Status P2H: **Menunggu verifikasi** -> **Terverifikasi** setelah pengawas (site yang sama, bukan pengisinya) memeriksa dan menandatangani. Setelah Terverifikasi, teknisi tidak bisa mengubahnya.
+- **Rekap** (menu Rekap): pilih **Mingguan, Bulanan, atau Tahunan**, geser periode dengan tombol panah, lihat ringkasan, lalu unduh PDF / Excel / Word.
 
 ## Coba dulu di komputer (10 menit)
 
-Buka 3 jendela terminal. Jalankan berurutan:
+1. Pasang **Node.js 22 atau lebih baru (LTS)** dari nodejs.org.
+2. Klik dua kali **`Jalankan-Lokal.bat`**. Pertama kali ia memasang paket (perlu internet), menyalakan database uji, server, dan tampilan web, lalu membuka http://localhost:5173.
+3. Masuk dengan No SID `admin` dan password dari `backend\.env` (`ADMIN_PASSWORD`). Kalau memilih data contoh, ada akun `teknisi` dan `pengawas` (site Suaran), password `Demo12345`.
+4. Selesai? Klik dua kali `Hentikan-Lokal.bat`.
 
-```bash
-# jendela 1 - database uji (biarkan terbuka)
-cd backend
-npm install
-copy .env.example .env
-npm run dev:db
-```
+Cara manual (tiga jendela terminal): `cd backend`, `npm install`, `copy .env.example .env`, `npm run dev:db` | `cd backend`, `npm run dev` (opsional `npm run demo`) | `cd frontend`, `npm install`, `npm run dev`.
 
-```bash
-# jendela 2 - server (biarkan terbuka)
-cd backend
-npm run dev
-# opsional, isi akun dan P2H contoh supaya dashboard ramai (hanya jalan di localhost):
-npm run demo
-```
+## Pasang ke internet: Render + Aiven
 
-```bash
-# jendela 3 - tampilan web
-cd frontend
-npm install
-npm run dev
-```
-
-Buka http://localhost:5173. Masuk dengan ID `admin` dan password dari `backend/.env` (`ADMIN_PASSWORD`). DBeaver bisa tersambung ke `localhost`, port `5433`, database `p2h`, user `postgres`, password `postgres`.
-
-## Pasang ke internet
-
-Urutannya: kunci rahasia -> GitHub -> database di Render -> server di Render -> web di Vercel -> sambungkan -> cek.
+Urutan: kunci rahasia -> GitHub -> database di Aiven -> server di Render -> cek -> akun -> HP.
 
 ### 1. Buat kunci rahasia
 
-```bash
-cd backend
-npm install
-npm run keys
-```
-
-Hasilnya 3 baris: `JWT_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`. Simpan di tempat aman (bukan di GitHub, jangan dikirim ke grup). Kunci di `.env` komputer ini hanya untuk uji lokal; di produksi WAJIB pakai kunci baru.
+Klik dua kali `Buat-Kunci.bat`. Hasilnya 3 baris: `JWT_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`. Salin ke Notepad dan simpan di tempat aman (bukan di GitHub, jangan dikirim ke grup). Kunci di `.env` komputer ini hanya untuk uji lokal; di internet WAJIB pakai kunci baru.
 
 ### 2. Unggah ke GitHub
 
-Buat repository **privat**, lalu unggah seluruh folder `p2h-genset` (berkas `.env`, `node_modules`, `dist` sudah dikecualikan oleh `.gitignore`).
+Buat repository **privat**, lalu unggah seluruh isi folder `p2h-genset` (berkas `.env`, `node_modules`, `dist` sudah dikecualikan oleh `.gitignore`).
 
-### 3. Database di Render
+### 3. Database di Aiven
 
-New + > **Postgres**. Region **Singapore**. Setelah jadi, salin dua alamat dari halaman database:
+1. Daftar di aiven.io, buat service **PostgreSQL**. Pilih paket **Free** untuk mencoba (lihat batas di bawah), region terdekat (mis. Singapura bila tersedia).
+2. Di halaman **Overview** service, salin **Service URI**. Bentuknya `postgres://avnadmin:...@...aivencloud.com:12345/defaultdb?sslmode=require`.
+3. (Disarankan) Di halaman yang sama klik **Download** di samping **CA certificate**, lalu buka berkas `ca.pem` dengan Notepad. Isinya dipakai untuk `DATABASE_CA`.
 
-- **Internal Database URL** -> untuk server (Langkah 4).
-- **External Database URL** -> hanya untuk DBeaver.
-
-Server dan database harus di region yang sama supaya alamat Internal bisa dipakai.
-
-### 4. Server di Render
+### 4. Server + web di Render (satu layanan)
 
 New + > **Web Service** > pilih repository GitHub.
 
 | Kolom | Isi |
 |---|---|
-| Region | Singapore (sama dengan database) |
-| Root Directory | `backend` |
-| Build Command | `npm ci --omit=dev` |
-| Start Command | `npm start` |
+| Region | Singapore (sedekat mungkin dengan database) |
+| Root Directory | kosongkan (kalau `backend` dan `frontend` ada di paling atas repository) |
+| Build Command | `cd frontend && npm ci --include=dev && npm run build && cd ../backend && npm ci --omit=dev` |
+| Start Command | `cd backend && npm start` |
 | Health Check Path (Advanced) | `/api/health` |
 
-Environment Variables (jangan isi `PORT`, Render mengisinya sendiri):
+Penting: `--include=dev` wajib ada. Render memasang `NODE_ENV=production`, dan tanpa itu paket pembangun tampilan web tidak ikut terpasang (build gagal; sudah dicoba).
+
+Environment Variables (jangan isi `PORT`; alamat aplikasi terisi otomatis oleh Render):
 
 | Nama | Isi |
 |---|---|
 | `NODE_ENV` | `production` |
-| `DATABASE_URL` | Internal Database URL dari Langkah 3 |
-| `JWT_SECRET` | dari `npm run keys` |
-| `VAPID_PUBLIC_KEY` | dari `npm run keys` |
-| `VAPID_PRIVATE_KEY` | dari `npm run keys` |
+| `DATABASE_URL` | Service URI dari Aiven (boleh berakhiran `?sslmode=require`) |
+| `DATABASE_CA` | isi `ca.pem` dari Aiven; boleh ditulis satu baris dengan `\n` sebagai pengganti baris baru; boleh dikosongkan (tetap terenkripsi, sertifikat tidak diperiksa) |
+| `JWT_SECRET` | dari `Buat-Kunci.bat` |
+| `VAPID_PUBLIC_KEY` | dari `Buat-Kunci.bat` |
+| `VAPID_PRIVATE_KEY` | dari `Buat-Kunci.bat` |
 | `VAPID_SUBJECT` | `mailto:` lalu email asli Anda |
-| `CORS_ORIGINS` | alamat web Vercel, mis. `https://nama-projek.vercel.app` (tanpa `/` di ujung). Sementara isi apa saja, diganti di Langkah 6. |
-| `APP_URL` | sama dengan `CORS_ORIGINS` |
-| `ADMIN_NRP` | ID admin pertama, mis. `admin` |
+| `ADMIN_NRP` | No SID admin pertama, mis. `admin` |
 | `ADMIN_NAME` | nama admin |
 | `ADMIN_PASSWORD` | password admin, minimal 8 karakter, yang kuat |
 
-Server menyiapkan database sendiri saat pertama hidup (tabel, 5 site, 30 butir cek, 25 genset, akun admin). Buka `https://<nama-server>.onrender.com/api/health`: harus tampil `"ok":true`. Setelah masuk pertama kali, ganti password admin di menu Akun, lalu hapus `ADMIN_PASSWORD` dari Environment.
+Server menyiapkan database sendiri saat pertama hidup (tabel, 5 site, 30 butir cek, 25 genset, akun admin). Buka `https://<nama-layanan>.onrender.com/api/health`: harus tampil `"ok":true`. Setelah masuk pertama kali, ganti password admin di menu Akun, lalu hapus `ADMIN_PASSWORD` dari Environment.
 
-### 5. Web di Vercel
+### 5. Cek hasil
 
-Add New > **Project** > pilih repository yang sama.
-
-| Kolom | Isi |
-|---|---|
-| Root Directory | `frontend` |
-| Framework Preset | Vite (otomatis) |
-| Environment Variable `VITE_API_URL` | alamat server Render, mis. `https://p2h-genset-api.onrender.com` (tanpa `/` di ujung) |
-
-Kalau `VITE_API_URL` diubah kemudian, harus **Redeploy** di Vercel (nilainya ditanam saat build). Aturan keamanan di `frontend/vercel.json` hanya mengizinkan server di `*.onrender.com`; kalau server pakai domain sendiri, ubah bagian `connect-src`.
-
-### 6. Sambungkan
-
-Kembali ke Render > server > Environment: isi `CORS_ORIGINS` dan `APP_URL` dengan alamat web Vercel yang sebenarnya (alamat pendek, bukan yang berkode acak), simpan. Server otomatis dipasang ulang.
-
-### 7. Cek hasil
-
-1. `/api/health` -> `ok: true`.
-2. Buka alamat Vercel, masuk sebagai admin.
-3. Akun saya > Pengguna: buat akun uji, atau impor dari Excel (lihat di bawah).
-4. Masuk dengan akun mekanik di HP, kirim satu P2H, lihat muncul di Beranda.
-5. Buka P2H itu, coba unduh PDF, Excel, Word.
+1. `/api/health` -> `ok: true`; alamat utama menampilkan halaman masuk.
+2. Masuk sebagai admin. Buat akun pengawas dan teknisi (Kelola > Pengguna > Tambah) untuk satu site.
+3. Masuk sebagai teknisi di HP, buat P2H dengan satu butir Rusak: tanpa foto harus ditolak, dengan foto terkirim.
+4. Masuk sebagai pengawas site yang sama: P2H itu berstatus Menunggu verifikasi; verifikasi, statusnya jadi Terverifikasi.
+5. Menu Rekap: coba Mingguan, Bulanan, Tahunan, lalu unduh PDF, Excel, Word.
 6. Akun saya > Notifikasi di HP > Aktifkan > Kirim tes.
 
-### 8. DBeaver ke database Render
+### 6. DBeaver ke Aiven
 
-Database > New Database Connection > PostgreSQL. Isi Host, Port (5432), Database, Username, Password dari **External Database URL**. Tab **SSL**: centang **Use SSL**, mode **require**. Lalu buka `docs/Query-DBeaver.sql`, klik di dalam satu query, tekan **Ctrl+Enter**.
+Di halaman Overview Aiven klik **Quick connect**, pilih **Java**, salin **JDBC URI**. Di DBeaver: Database > New Database Connection > PostgreSQL > pilihan **URL** > tempel > Finish. Lalu buka `docs/Query-DBeaver.sql`, klik di dalam satu query, tekan **Ctrl+Enter**.
 
-### 9. Impor akun dari Excel
-
-Isi lembar `Akun` di `docs/Template-Impor-Akun.xlsx` (ID karyawan, Nama, Peran, Site, Jabatan; password boleh kosong). Salin semua barisnya (Ctrl+C), lalu di aplikasi: Akun saya > Pengguna > **Impor dari Excel** > tempel > **Buat akun**. Password awal muncul SATU KALI; bagikan lewat pesan pribadi. Setiap orang wajib menggantinya saat masuk pertama.
-
-### 10. Pasang di HP
+### 7. Pasang di HP
 
 - **Android**: buka di Chrome > menu (tiga titik) > Pasang aplikasi.
 - **iPhone / iPad**: buka di **Safari** > Bagikan > **Tambah ke Layar Utama**. Notifikasi di iPhone hanya jalan kalau dibuka dari ikon di Layar Utama (iOS 16.4 ke atas).
+
+## Kalau tampilan web ingin dipasang terpisah (tidak wajib)
+
+Tampilan web bisa juga di tempat lain (Vercel, Netlify, dll.): bangun dengan `VITE_API_URL=https://alamat-server` lalu isi `CORS_ORIGINS` (dan `APP_URL`) di server dengan alamat web itu. Cara standar di atas tidak membutuhkannya.
 
 ## Biaya dan batas (dicek 17 Okt 2026, cek lagi di halaman harga sebelum membayar)
 
 | Layanan | Gratis | Berbayar |
 |---|---|---|
+| Aiven PostgreSQL | tanpa batas waktu; 1 CPU, 1 GB RAM, **1 GB disk**; 20 koneksi; bisa **dimatikan otomatis kalau lama tidak dipakai** (ada pemberitahuan, bisa dinyalakan lagi) | naik paket lewat tombol Upgrade plan setelah menambah metode pembayaran (harga paket kecil sekitar US$5-8 per bulan; cek) |
 | Render server | tidur setelah 15 menit tanpa pemakai, bangun sekitar 1 menit; 750 jam per bulan; Render menyebut gratis tidak untuk produksi | Starter sekitar US$7 per bulan (tidak tidur) |
-| Render database | **kedaluwarsa 30 hari setelah dibuat** (lalu 14 hari masa tenggang, setelah itu data DIHAPUS); 1 GB; tanpa cadangan | Basic-256mb sekitar US$6 per bulan + US$0,30 per GB per bulan (sumber berbeda-beda, cek di halaman harga) |
-| Vercel | Hobby: **hanya untuk pemakaian pribadi / non-komersial** | Pro: US$20 per pengguna per bulan |
 
-Untuk dipakai sungguhan oleh perusahaan, siapkan database berbayar sejak awal. Perkiraan pertumbuhan data: sekitar 24,5 KB per P2H (diukur dari data contoh) = sekitar 0,45 GB per tahun kalau semua 25 genset diisi 2 shift setiap hari. Soal Vercel Hobby untuk pemakaian perusahaan: tanyakan ke IT.
+Foto temuan disimpan di database. Perkiraan kasar: sekitar 25 KB per P2H ditambah foto (sekitar 150-300 KB per foto setelah dikecilkan). Kalau 8% P2H ada temuan dengan 1-2 foto, kira-kira **0,9 GB per tahun** untuk 25 genset diisi 2 shift setiap hari. Jadi 1 GB gratis Aiven hanya cukup sekitar setahun; untuk dipakai sungguhan pilih paket dengan disk 5 GB atau lebih. Pantau lewat query nomor 12-14 di `Query-DBeaver.sql`.
 
 ## Lupa password admin
 
@@ -162,21 +138,23 @@ Sudah diuji. Di DBeaver jalankan (hanya kalau benar-benar perlu):
 UPDATE users SET is_active = false WHERE role = 'admin';
 ```
 
-Lalu di Render ubah `ADMIN_PASSWORD` (minimal 8 karakter) dan restart server. Masuk dengan `ADMIN_NRP` dan password baru. Sebaiknya punya minimal 2 admin supaya jalur ini jarang dipakai.
+Lalu di Render ubah `ADMIN_PASSWORD` (minimal 8 karakter) dan restart layanan. Masuk dengan `ADMIN_NRP` dan password baru. Sebaiknya punya minimal 2 admin.
 
 ## Masalah umum
 
 | Gejala | Penyebab / jalan keluar |
 |---|---|
 | Lama sekali saat pertama dibuka | Server gratis sedang bangun (sekitar 1 menit). Tunggu, atau pakai paket Starter. |
-| Banner "Tidak ada sinyal" padahal internet ada | `VITE_API_URL` salah, atau `CORS_ORIGINS` tidak sama persis dengan alamat web (harus https, tanpa `/` di ujung). Ubah lalu pasang ulang. |
-| Log Render: "database belum siap (percobaan ...)" | `DATABASE_URL` salah, atau beda region dengan database. Kalau perlu pakai External URL (tetap jalan). |
+| Log Render: "database belum siap (percobaan ...)" | `DATABASE_URL` salah, atau database Aiven sedang dimatikan karena lama tidak dipakai: nyalakan di halaman Overview Aiven. |
+| Log: "self-signed certificate" | `DATABASE_CA` terisi sertifikat yang salah. Kosongkan, atau isi dengan `ca.pem` dari service yang sama. |
+| Build Render gagal ("vite: not found") | Build Command tidak memakai `npm ci --include=dev` untuk bagian frontend. |
 | Notifikasi tidak muncul | iPhone belum dipasang di Layar Utama; izin notifikasi ditolak; `VAPID_*` belum diisi; kunci VAPID diganti (semua HP harus Aktifkan lagi). |
+| Foto tidak bisa dikirim | Coba ambil foto lagi (ukuran dikecilkan otomatis); sinyal lemah: P2H tersimpan di HP dan terkirim otomatis begitu sinyal kembali. |
 | `npm install` menampilkan "2 moderate severity vulnerabilities" | Abaikan (dari paket Excel, tidak terpakai di jalur yang berbahaya). **Jangan** jalankan `npm audit fix --force`. |
 | Terlalu banyak permintaan (429) | Tunggu semenit. Batas masuk: 15 percobaan per menit. |
 
 ## Status uji
 
-- Lulus: pengecekan tipe dan build web, 24 uji API, 14 pengecekan alur layar di Chrome (ubah P2H, tanda tangan, tutup temuan, hak akses), notifikasi push sungguhan lewat Chrome, mode tanpa sinyal, pasang bersih dari nol (`npm ci`) dan jalan sebagai produksi dari database kosong, pengecekan huruf besar/kecil nama berkas untuk Linux.
-- Belum: pasang sungguhan di Render / Vercel, iPhone dan Android asli, notifikasi di HP asli.
-- Perlu Anda pastikan: "Job Site" per site (dugaan "BMO 1" untuk Binungan dan Suaran), kode dokumen form (`BC-GE-P-ex JPC`), jam shift 06:00 dan 18:00.
+- Lulus: pengecekan tipe dan build web; **27 uji API** (foto wajib, batas site, verifikasi, rekap, unduhan, akun, impor); **37 pengecekan layar** di Chrome (foto wajib dan pengecilan foto, verifikasi, pengawas site lain ditolak, akun admin, rekap, tanpa sinyal dengan foto); latihan produksi "satu layanan" dari salinan bersih (build seperti Render, server menyajikan web, CSP, service worker, tanpa kesalahan konsol); **koneksi database ber-TLS ala Aiven** (sertifikat sendiri, `?sslmode=require`, `DATABASE_CA` benar dan salah); template impor akun; 15 query DBeaver; jalur lupa password admin; huruf besar/kecil nama berkas untuk Linux.
+- Belum: pasang sungguhan di Render / Aiven; iPhone dan Android asli (termasuk kamera HP untuk foto); notifikasi di HP asli.
+- Perlu Anda pastikan: "Job Site" per site (dugaan "BMO 1" untuk Binungan dan Suaran), kode dokumen form (`BC-GE-P-ex JPC`), jam shift 06:00 dan 18:00, izin IT memakai layanan cloud untuk data P2H.

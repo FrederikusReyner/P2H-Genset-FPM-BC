@@ -28,8 +28,11 @@ export default function AccountPage() {
         <div className="profile__main">
           <div className="profile__name">{user.name}</div>
           <div className="muted">
-            ID <span className="mono">{user.nrp}</span> · {ROLE_LABEL[user.role]}
-            {site ? ` · ${site.name}` : ''}
+            No SID <span className="mono">{user.nrp}</span> · {ROLE_LABEL[user.role]}
+            {user.role === 'admin' ? ' · semua site' : site ? ` · site ${site.name}` : ' · site belum ditentukan'}
+          </div>
+          <div className="muted small">
+            {[user.company, user.job_title].filter(Boolean).join(' · ')}
           </div>
         </div>
         <button type="button" className="btn btn--ghost" onClick={logout}>
@@ -229,6 +232,7 @@ function NotificationCard() {
           <div className="small muted">
             <b>Semua P2H</b>: tiap P2H baru + temuan + STOP. <b>Hanya temuan</b>: hanya kalau ada yang rusak, STOP, atau sudah selesai diperbaiki.
           </div>
+          {user.role === 'admin' ? (
           <div className="field">
             <div className="field__label">Site yang diikuti</div>
             <div className="chips chips--wrap">
@@ -243,6 +247,9 @@ function NotificationCard() {
             </div>
             <div className="field__hint">Berlaku untuk pemberitahuan di HP dan di ikon lonceng.</div>
           </div>
+          ) : (
+            <div className="small muted">Anda hanya menerima pemberitahuan dari site {meta.data?.sites[0]?.name ?? 'Anda'}.</div>
+          )}
         </div>
       )}
     </section>

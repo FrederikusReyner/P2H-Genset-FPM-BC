@@ -54,6 +54,9 @@ const P = {
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   menu: 'M4 6h16M4 12h16M4 18h16',
   undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
+  camera: 'M3.5 7.5h4l1.5-3h6l1.5 3h4v12h-17zM12 17a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4z',
+  image: 'M3.5 4.5h17v15h-17zM3.5 16.5l5-5 4 4 3-3 5 5M9 9.5v.01',
+  verified: 'M12 2.5l8 3v6c0 5-3.4 8.7-8 10-4.6-1.3-8-5-8-10v-6zM8.5 12l2.5 2.5 4.5-5',
 } as const;
 
 export type IconName = keyof typeof P;

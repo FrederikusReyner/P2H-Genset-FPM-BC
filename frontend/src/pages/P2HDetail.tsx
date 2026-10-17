@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
+import { PhotoStrip } from '../components/Photos';
 import { SignaturePad } from '../components/SignaturePad';
 import { Confirm, DangerCode, DownloadMenu, ErrorBox, ResultChip, Sheet, Spinner } from '../components/ui';
 import { ApiError, api, downloadFile } from '../lib/api';
 import { CAN_FIX, useAuth } from '../lib/auth';
-import { CONDITION_LABEL, FIX_LABEL, ago, dateTime, dayName, longDate, modelOf, num, segments, shiftLabel, span, unitTitle } from '../lib/format';
+import { CONDITION_LABEL, FIX_LABEL, ago, dateTime, dayName, longDate, modelOf, num, plain, segments, shiftLabel, span, unitTitle } from '../lib/format';
 import { useToast } from '../lib/toast';
 import type { Answer, FixStatus, FormDetail } from '../lib/types';
 
@@ -44,7 +45,7 @@ export default function P2HDetailPage() {
   });
 
   const unsign = useMutation({
-    mutationFn: () => api.del(`/api/p2h/${id}/sign`),
+    mutationFn: () => api.del(`/api/p2h/${id}/verify`),
     onSuccess: refresh,
   });
 
@@ -103,6 +104,15 @@ export default function P2HDetailPage() {
         </div>
         <div className="dhead__side">
           <ResultChip result={f.result} />
+          {f.sup_signed_at ? (
+            <span className="chip chip--ok" title={`Diverifikasi ${dateTime(f.sup_signed_at)}`}>
+              <Icon name="verified" size={14} stroke={2.4} /> Terverifikasi
+            </span>
+          ) : (
+            <span className="chip chip--idle">
+              <Icon name="clock" size={14} stroke={2.4} /> Menunggu verifikasi
+            </span>
+          )}
           <div className="dhead__counts small">
             {f.n_aa > 0 && <span className="stop-text">{f.n_aa} temuan AA</span>}
             {f.n_a > 0 && <span className="warn-text">{f.n_a} temuan A</span>}
@@ -120,13 +130,13 @@ export default function P2HDetailPage() {
         )}
         {perm.can_sign && (
           <button type="button" className="btn btn--primary" onClick={() => setSignOpen(true)}>
-            <Icon name="pen" size={18} /> Tanda tangani
+            <Icon name="verified" size={18} /> Verifikasi &amp; tanda tangan
           </button>
         )}
         <span className="grow" />
         {perm.can_unsign && (
           <button type="button" className="btn btn--sm btn--ghost" onClick={() => unsign.mutate()} disabled={unsign.isPending}>
-            Cabut tanda tangan
+            Batalkan verifikasi
           </button>
         )}
         {perm.can_delete && (
@@ -136,10 +146,20 @@ export default function P2HDetailPage() {
         )}
       </div>
 
-      {!f.sup_signed_at && (
+      {!f.sup_signed_at ? (
         <div className="banner banner--info">
-          <Icon name="pen" size={18} />
-          <div className="grow">Belum ditandatangani pengawas / PJA.</div>
+          <Icon name="clock" size={18} />
+          <div className="grow">
+            <b>Menunggu verifikasi pengawas.</b> Status berubah menjadi <b>Terverifikasi</b> setelah pengawas memeriksa P2H ini dan menandatanganinya.
+          </div>
+        </div>
+      ) : (
+        <div className="banner banner--ok">
+          <Icon name="verified" size={18} />
+          <div className="grow">
+            <b>Terverifikasi</b> oleh {f.sup_name}
+            {f.sup_company ? ` (${f.sup_company})` : ''} · {dateTime(f.sup_signed_at)}
+          </div>
         </div>
       )}
 
@@ -163,6 +183,7 @@ export default function P2HDetailPage() {
                   {it.condition !== 'baik' && (
                     <div className="drow__finding">
                       {it.note && <div className="drow__note">“{it.note}”</div>}
+                      {it.photos?.length > 0 && <PhotoStrip items={it.photos.map((x) => x.id)} label={plain(it.item_text)} />}
                       <div className="drow__fix">
                         <FixBadge status={it.fix_status} />
                         {it.fix_status === 'closed' && (
@@ -237,20 +258,32 @@ export default function P2HDetailPage() {
 
       <section className="signs">
         <div className="sign card">
-          <div className="eyebrow">Tanda tangan · Mekanik / Electrician</div>
+          <div className="eyebrow">Tanda tangan · Teknisi</div>
           {f.signature_png ? <img src={f.signature_png} alt={`Tanda tangan ${f.inspector_name}`} className="sign__img" /> : <div className="sign__img sign__img--none muted">tidak ada</div>}
           <div className="sign__name">( {f.inspector_name} )</div>
+          <div className="small muted">
+            {[f.inspector_nrp ? `No SID ${f.inspector_nrp}` : '', f.inspector_company].filter(Boolean).join(' · ')}
+          </div>
           <div className="small muted">{dateTime(f.filled_at || f.submitted_at)}</div>
         </div>
-        <div className="sign card">
-          <div className="eyebrow">Tanda tangan · Foreman / Spv · Pengawas / PJA</div>
+        <div className={`sign card ${f.sup_signed_at ? 'sign--verified' : ''}`}>
+          <div className="eyebrow">Verifikasi · Pengawas</div>
           {f.sup_signature_png ? (
             <img src={f.sup_signature_png} alt={`Tanda tangan ${f.sup_name}`} className="sign__img" />
           ) : (
-            <div className="sign__img sign__img--none muted">belum ditandatangani</div>
+            <div className="sign__img sign__img--none muted">menunggu verifikasi</div>
           )}
           <div className="sign__name">{f.sup_name ? `( ${f.sup_name} )` : '(                    )'}</div>
-          <div className="small muted">{f.sup_signed_at ? dateTime(f.sup_signed_at) : ''}</div>
+          {f.sup_signed_at ? (
+            <>
+              <div className="small muted">{[f.sup_nrp ? `No SID ${f.sup_nrp}` : '', f.sup_company].filter(Boolean).join(' · ')}</div>
+              <div className="sign__stamp">
+                <Icon name="verified" size={14} stroke={2.4} /> Terverifikasi · {dateTime(f.sup_signed_at)}
+              </div>
+            </>
+          ) : (
+            <div className="small muted">Belum diverifikasi</div>
+          )}
         </div>
       </section>
 
@@ -402,9 +435,9 @@ function SignSheet({ open, onClose, savedSig, formId, onDone }: { open: boolean;
     setBusy(true);
     setErr(null);
     try {
-      await api.post(`/api/p2h/${formId}/sign`, mode === 'saved' ? {} : { signature_png: png, save_signature: save });
+      await api.post(`/api/p2h/${formId}/verify`, mode === 'saved' ? {} : { signature_png: png, save_signature: save });
       await onDone(mode === 'new' && save ? png : null);
-      toast.push({ title: 'Ditandatangani', body: 'P2H sudah diketahui pengawas.', tone: 'ok' });
+      toast.push({ title: 'P2H terverifikasi', body: 'Statusnya sekarang Terverifikasi.', tone: 'ok' });
       onClose();
     } catch (e) {
       setErr(e instanceof ApiError ? e.message : 'Gagal menyimpan.');
@@ -417,20 +450,22 @@ function SignSheet({ open, onClose, savedSig, formId, onDone }: { open: boolean;
     <Sheet
       open={open}
       onClose={onClose}
-      title="Tanda tangan pengawas"
+      title="Verifikasi pengawas"
       footer={
         <>
           <button type="button" className="btn btn--ghost" onClick={onClose} disabled={busy}>
             Batal
           </button>
           <button type="button" className="btn btn--primary" onClick={() => void go()} disabled={busy || (mode === 'new' && !png)}>
-            {busy ? 'Menyimpan…' : 'Tanda tangani'}
+            {busy ? 'Menyimpan…' : 'Verifikasi'}
           </button>
         </>
       }
     >
       <div className="stack">
-        <p className="muted">Dengan menandatangani, Anda menyatakan sudah menerima dan memeriksa form P2H ini.</p>
+        <p className="muted">
+          Dengan menandatangani, Anda menyatakan sudah memeriksa form P2H ini (termasuk foto kerusakan). Setelah itu P2H berstatus <b>Terverifikasi</b> dan tidak bisa diubah lagi oleh teknisi.
+        </p>
         {savedSig && (
           <div className="seg seg--block" role="radiogroup" aria-label="Sumber tanda tangan">
             <button type="button" role="radio" aria-checked={mode === 'saved'} className={`seg__btn ${mode === 'saved' ? 'is-on' : ''}`} onClick={() => setMode('saved')}>

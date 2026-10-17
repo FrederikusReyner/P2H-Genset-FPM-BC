@@ -5,7 +5,7 @@ import { Icon, type IconName } from './Icon';
 import { BrandLockup, MtlMark } from './ui';
 import { wakeServer } from '../lib/api';
 import { CAN_FILL, useAuth } from '../lib/auth';
-import { useFindings, useNotices, useOnline, useSlowServer } from '../lib/hooks';
+import { useFindings, useMeta, useNotices, useOnline, useSlowServer } from '../lib/hooks';
 import { flushOutbox, onOutboxChange, removeFromOutbox, type OutboxItem } from '../lib/outbox';
 import { syncPush } from '../lib/push';
 import { useToast } from '../lib/toast';
@@ -31,6 +31,8 @@ export function AppShell() {
   const slow = useSlowServer();
   const open = useFindings('open');
   const notices = useNotices();
+  const meta = useMeta();
+  const mySite = user && user.role !== 'admin' ? meta.data?.sites.find((s) => s.id === user.site_id)?.name : undefined;
   const [outbox, setOutbox] = useState<OutboxItem[]>([]);
   const [sw, setSw] = useState(swState());
   const toastedUpTo = useRef<number | null>(null);
@@ -137,6 +139,7 @@ export function AppShell() {
     { to: '/', label: 'Beranda', icon: 'home', end: true },
     ...(canFill ? [{ to: '/p2h/baru', label: 'P2H baru', icon: 'plus' as IconName }] : []),
     { to: '/p2h', label: 'Riwayat', icon: 'history', end: true },
+    { to: '/rekap', label: 'Rekap', icon: 'chart' },
     { to: '/temuan', label: 'Temuan', icon: 'alert', badge: openCount },
     { to: '/unit', label: 'Unit genset', icon: 'bolt' },
     { to: '/akun', label: 'Akun saya', icon: 'user' },
@@ -183,7 +186,7 @@ export function AppShell() {
             </span>
             <span className="topbar__who">
               <b>{user?.name}</b>
-              <i>{user ? ROLE_LABEL[user.role] : ''}</i>
+              <i>{user ? `${ROLE_LABEL[user.role]}${mySite ? ` · ${mySite}` : ''}` : ''}</i>
             </span>
           </button>
         </div>

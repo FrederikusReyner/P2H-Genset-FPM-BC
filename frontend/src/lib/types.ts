@@ -1,6 +1,6 @@
 // Bentuk data yang dikirim server (sama dengan nama kolom di database)
 
-export type Role = 'mekanik' | 'pengawas' | 'manajemen' | 'admin';
+export type Role = 'teknisi' | 'pengawas' | 'admin';
 export type Condition = 'baik' | 'rusak' | 'perbaiki';
 export type Danger = 'AA' | 'A';
 export type ResultKind = 'baik' | 'temuan_a' | 'stop_aa';
@@ -14,6 +14,7 @@ export interface User {
   name: string;
   role: Role;
   site_id: number | null;
+  company: string | null;
   job_title: string | null;
   phone: string | null;
   must_change_password: boolean;
@@ -129,6 +130,7 @@ export interface P2HListItem {
   location: string | null;
   inspector_name: string;
   inspector_nrp: string | null;
+  inspector_company: string | null;
   result: ResultKind;
   n_aa: number;
   n_a: number;
@@ -137,13 +139,23 @@ export interface P2HListItem {
   filled_at: string;
   submitted_at: string;
   signed: boolean;
+  /** sudah diverifikasi (ditandatangani) pengawas */
+  verified: boolean;
+  n_photos: number;
   sup_name: string | null;
   sup_signed_at: string | null;
   notes: string | null;
 }
 
+export interface PhotoRef {
+  id: number;
+  mime: string;
+  size: number;
+}
+
 export interface Answer {
   id: number;
+  photos: PhotoRef[];
   item_id: number | null;
   section_code: string;
   section_title: string;
@@ -170,6 +182,7 @@ export interface FormFull {
   user_id: number;
   inspector_name: string;
   inspector_nrp: string | null;
+  inspector_company: string | null;
   unit_code: string;
   unit_old_code: string | null;
   unit_brand: string | null;
@@ -190,6 +203,7 @@ export interface FormFull {
   edited_by_name: string | null;
   sup_name: string | null;
   sup_nrp: string | null;
+  sup_company: string | null;
   sup_signature_png: string | null;
   sup_signed_at: string | null;
   rated_kw: number | null;
@@ -236,6 +250,8 @@ export interface Finding {
   fix_note?: string | null;
   fix_by_name?: string | null;
   fix_at?: string | null;
+  /** nomor foto kerusakan (dari semua laporan temuan yang sama) */
+  photo_ids?: number[];
 }
 
 export interface DashUnit {
@@ -315,6 +331,7 @@ export interface UserRow {
   name: string;
   role: Role;
   site_id: number | null;
+  company: string | null;
   job_title: string | null;
   phone: string | null;
   is_active: boolean;
@@ -337,9 +354,33 @@ export interface P2HPayload {
   hm_start?: number | null;
   hm_end?: number | null;
   params: Record<string, { idle?: number | null; load?: number | null }>;
-  answers: { item_id: number; condition: Condition; note?: string | null }[];
+  /** photos = foto baru (data URL JPEG); keep_photo_ids = foto lama yang tetap dipakai saat mengubah. Wajib ada foto bila rusak / perbaiki. */
+  answers: { item_id: number; condition: Condition; note?: string | null; photos?: string[]; keep_photo_ids?: number[] }[];
   notes?: string | null;
   signature_png?: string | null;
   use_saved_signature?: boolean;
   save_signature?: boolean;
+}
+
+export type RekapPeriod = 'week' | 'month' | 'year';
+
+export interface RekapRow {
+  total: number;
+  baik: number;
+  temuan: number;
+  stop: number;
+  verified: number;
+}
+
+export interface RekapPreview {
+  period: RekapPeriod | null;
+  from: string | null;
+  to: string | null;
+  title: string;
+  subtitle: string;
+  sum: RekapRow & { unverified: number; expected: number; compliance: number | null };
+  sites: (RekapRow & { site: string })[];
+  bucket_unit: string;
+  buckets: (RekapRow & { label: string })[];
+  findings: { aa: number; a: number; closed: number; total: number };
 }

@@ -25,7 +25,7 @@ const LoginIn = z.object({
   password: z.string().min(1).max(200),
 });
 
-const FULL_USER = `SELECT id, nrp, name, role, site_id, job_title, phone, password_hash, signature_png,
+const FULL_USER = `SELECT id, nrp, name, role, site_id, company, job_title, phone, password_hash, signature_png,
   notif_mode, notif_site_ids, is_active, must_change_password, token_version,
   (signature_png IS NOT NULL) AS has_signature FROM users`;
 
@@ -34,7 +34,7 @@ r.post('/login', loginLimiter, async (req, res) => {
   const { rows } = await query(`${FULL_USER} WHERE lower(nrp) = lower($1)`, [nrp]);
   const u = rows[0];
   const ok = await bcrypt.compare(password, u ? u.password_hash : DUMMY_HASH);
-  if (!u || !ok) throw new AppError(401, 'bad_login', 'ID karyawan atau password salah.');
+  if (!u || !ok) throw new AppError(401, 'bad_login', 'No SID atau password salah.');
   if (!u.is_active) throw new AppError(403, 'disabled', 'Akun Anda dinonaktifkan. Hubungi admin.');
   await query('UPDATE users SET last_login_at = now() WHERE id = $1', [u.id]);
   res.json({ token: signToken(u), user: publicUser(u, { signature_png: u.signature_png }) });
@@ -84,7 +84,8 @@ const PrefsIn = z.object({
 
 r.put('/prefs', requireAuth, async (req, res) => {
   const { notif_mode, notif_site_ids } = parse(PrefsIn, req.body);
-  const ids = notif_site_ids && notif_site_ids.length ? notif_site_ids : null;
+  // teknisi / pengawas hanya mengikuti site-nya sendiri (diatur oleh admin), jadi pilihan site hanya berlaku untuk admin
+  const ids = req.user.role === 'admin' && notif_site_ids && notif_site_ids.length ? notif_site_ids : null;
   await query('UPDATE users SET notif_mode = $1, notif_site_ids = $2, updated_at = now() WHERE id = $3', [
     notif_mode,
     ids,

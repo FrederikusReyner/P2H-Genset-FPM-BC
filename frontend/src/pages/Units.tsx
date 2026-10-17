@@ -42,16 +42,18 @@ export default function UnitsPage() {
         )}
       </PageHead>
 
-      <div className="chips" role="tablist" aria-label="Site">
-        <button type="button" role="tab" aria-selected={site === null} className={`fchip ${site === null ? 'is-on' : ''}`} onClick={() => setSite(null)}>
-          Semua site
-        </button>
-        {meta.data?.sites.map((s) => (
-          <button key={s.id} type="button" role="tab" aria-selected={site === s.id} className={`fchip ${site === s.id ? 'is-on' : ''}`} onClick={() => setSite(s.id)}>
-            {s.name}
+      {(meta.data?.sites.length ?? 0) > 1 && (
+        <div className="chips" role="tablist" aria-label="Site">
+          <button type="button" role="tab" aria-selected={site === null} className={`fchip ${site === null ? 'is-on' : ''}`} onClick={() => setSite(null)}>
+            Semua site
           </button>
-        ))}
-      </div>
+          {meta.data?.sites.map((s) => (
+            <button key={s.id} type="button" role="tab" aria-selected={site === s.id} className={`fchip ${site === s.id ? 'is-on' : ''}`} onClick={() => setSite(s.id)}>
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="row row--wrap filters__row">
         <label className="searchbox grow">
           <Icon name="search" size={18} />

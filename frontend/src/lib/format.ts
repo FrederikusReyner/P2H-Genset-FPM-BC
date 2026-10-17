@@ -139,11 +139,44 @@ export function plural(n: number, one: string): string {
 }
 
 export const ROLE_LABEL: Record<string, string> = {
-  mekanik: 'Mekanik / Electrician',
-  pengawas: 'Pengawas / Foreman',
-  manajemen: 'Manajemen',
+  teknisi: 'Teknisi',
+  pengawas: 'Pengawas',
   admin: 'Admin',
 };
+
+/* ---------- periode rekap: mingguan / bulanan / tahunan ---------- */
+
+export type Period = 'week' | 'month' | 'year';
+export const PERIOD_LABEL: Record<Period, string> = { week: 'Mingguan', month: 'Bulanan', year: 'Tahunan' };
+
+/** Awal periode yang memuat tanggal `anchor` (minggu mulai Senin). */
+export function periodStart(period: Period, anchor: string): string {
+  const [y, m, d] = anchor.split('-').map(Number);
+  if (period === 'week') {
+    const dow = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+    return addDays(anchor, -dow);
+  }
+  if (period === 'month') return `${y}-${String(m).padStart(2, '0')}-01`;
+  return `${y}-01-01`;
+}
+
+/** Tulisan periode di layar: "12 Okt 2026 – 18 Okt 2026", "Oktober 2026", "Tahun 2026". */
+export function periodText(period: Period, from: string, to: string): string {
+  if (period === 'year') return `Tahun ${from.slice(0, 4)}`;
+  if (period === 'month') {
+    const [y, m] = from.split('-').map(Number);
+    return `${BULAN[m - 1]} ${y}`;
+  }
+  return `${mediumDate(from)} – ${mediumDate(to)}`;
+}
+
+/** Geser satu periode ke depan (+1) atau ke belakang (-1). */
+export function stepAnchor(period: Period, anchor: string, dir: 1 | -1): string {
+  const [y, m] = anchor.split('-').map(Number);
+  if (period === 'week') return addDays(periodStart('week', anchor), 7 * dir);
+  if (period === 'month') return new Date(Date.UTC(y, m - 1 + dir, 1)).toISOString().slice(0, 10);
+  return `${y + dir}-01-01`;
+}
 
 export const RESULT_LABEL: Record<string, string> = {
   baik: 'Semua baik',

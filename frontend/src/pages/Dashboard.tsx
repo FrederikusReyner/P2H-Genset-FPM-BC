@@ -140,10 +140,10 @@ export default function DashboardPage() {
                 : 'semua sudah diisi'}
             </span>
           </div>
-          <Link to="/p2h?belumttd=1" className={`stat stat--link ${kpi.unsigned ? 'stat--pend' : ''}`}>
-            <span className="stat__label">Menunggu tanda tangan pengawas</span>
+          <Link to="/p2h?belumverifikasi=1" className={`stat stat--link ${kpi.unsigned ? 'stat--pend' : ''}`}>
+            <span className="stat__label">Menunggu verifikasi pengawas</span>
             <span className="stat__value">{kpi.unsigned}</span>
-            <span className="stat__note">{kpi.unsigned ? 'P2H shift ini belum diketahui pengawas' : 'semua sudah ditandatangani'}</span>
+            <span className="stat__note">{kpi.unsigned ? 'P2H shift ini belum Terverifikasi' : 'semua sudah Terverifikasi'}</span>
           </Link>
         </div>
       </section>

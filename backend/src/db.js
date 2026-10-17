@@ -8,22 +8,36 @@ types.setTypeParser(1082, (v) => v); // date
 types.setTypeParser(1700, (v) => (v === null ? null : parseFloat(v))); // numeric
 types.setTypeParser(20, (v) => (v === null ? null : parseInt(v, 10))); // bigint
 
+/**
+ * Alamat database dari penyedia (Aiven, Render) sering berakhir "?sslmode=require".
+ * Pengaturan itu dibuang dari alamat karena kita mengatur SSL sendiri di bawah; kalau dibiarkan,
+ * pustaka pg bisa memaksa pemeriksaan sertifikat dan koneksi ke Aiven gagal ("self-signed certificate").
+ */
+function parseDatabaseUrl(raw) {
+  try {
+    const u = new URL(raw);
+    const sslmode = u.searchParams.get('sslmode');
+    for (const k of ['sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'ssl', 'uselibpqcompat']) u.searchParams.delete(k);
+    return { url: u.toString(), host: u.hostname, sslmode };
+  } catch {
+    return { url: raw, host: '', sslmode: null };
+  }
+}
+const dbUrl = parseDatabaseUrl(config.databaseUrl);
+
 function sslOption() {
   const mode = config.databaseSsl;
-  if (mode === 'false') return false;
-  if (mode === 'true') return { rejectUnauthorized: false };
+  if (mode === 'false' || dbUrl.sslmode === 'disable') return false;
+  const on = config.databaseCa ? { ca: config.databaseCa, rejectUnauthorized: true } : { rejectUnauthorized: false };
+  if (mode === 'true') return on;
   // auto: komputer sendiri & alamat dalam Render (tanpa titik) tidak pakai SSL; selain itu pakai SSL
-  try {
-    const host = new URL(config.databaseUrl).hostname;
-    if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || !host.includes('.')) return false;
-  } catch {
-    return false;
-  }
-  return { rejectUnauthorized: false };
+  const host = dbUrl.host;
+  if (!host || host === 'localhost' || host === '127.0.0.1' || host === '::1' || !host.includes('.')) return false;
+  return on;
 }
 
 export const pool = new Pool({
-  connectionString: config.databaseUrl,
+  connectionString: dbUrl.url,
   ssl: sslOption(),
   max: 8,
   idleTimeoutMillis: 30_000,

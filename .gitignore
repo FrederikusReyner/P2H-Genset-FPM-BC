@@ -13,3 +13,6 @@ backend/.devdb/
 *.log
 .DS_Store
 Thumbs.db
+
+# Salinan repository GitHub milik pengguna (folder ini punya .git sendiri): jangan ikut terunggah
+P2H-Genset-FPM-BC/

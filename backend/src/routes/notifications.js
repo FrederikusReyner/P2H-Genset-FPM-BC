@@ -16,7 +16,7 @@ r.get('/push/public-key', (_req, res) => {
 r.use(requireAuth);
 
 // pemberitahuan yang boleh dilihat pengguna ini (sesuai pilihan site & jenis)
-const VISIBLE = `(n.site_id IS NULL OR u.notif_site_ids IS NULL OR n.site_id = ANY (u.notif_site_ids))
+const VISIBLE = `(n.site_id IS NULL OR (u.role = 'admin' AND (u.notif_site_ids IS NULL OR n.site_id = ANY (u.notif_site_ids))) OR (u.role <> 'admin' AND n.site_id = u.site_id))
   AND (u.notif_mode = 'all' OR n.kind IN ('p2h_stop','p2h_finding','finding_closed'))`;
 
 r.get('/', async (req, res) => {

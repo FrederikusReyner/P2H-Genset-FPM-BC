@@ -21,6 +21,8 @@ if (!/@(localhost|127\.0\.0\.1)[:/]/.test(dbUrl)) {
 const BASE = process.env.API_URL || `http://localhost:${process.env.PORT || 4000}`;
 const SIG = fs.readFileSync(path.join(here, '..', 'tests', 'fixtures', 'signature-mekanik.txt'), 'utf8');
 const SIG2 = fs.readFileSync(path.join(here, '..', 'tests', 'fixtures', 'signature-pengawas.txt'), 'utf8');
+// foto contoh untuk butir rusak / perlu diperbaiki (foto kini wajib)
+const PHOTOS = ['foto-a.jpg', 'foto-b.jpg'].map((n) => `data:image/jpeg;base64,${fs.readFileSync(path.join(here, '..', 'tests', 'fixtures', n)).toString('base64')}`);
 const DEMO_PW = 'Demo12345';
 
 async function api(method, url, token, body) {
@@ -55,16 +57,23 @@ const NOTES = {
   A: ['Sirip radiator penyok', 'Baut mounting kendor', 'Terminal battery kotor / berkarat', 'Kabel grounding longgar', 'Lampu alarm redup', 'Sekring panel longgar', 'Lampu ruang genset mati', 'APAR tekanan kurang', 'Guarding fan radiator lepas', 'Oil trap penuh'],
 };
 
+const MTL = 'PT Mutiara Tanjung Lestari';
+const BC = 'PT Berau Coal';
+// admin dibuat otomatis dari .env. Tiga akun utama untuk mencoba tiap peran: admin, pengawas, teknisi.
 const PEOPLE = [
-  { nrp: 'andi', name: 'Andi Prasetyo', role: 'mekanik', site: 'Suaran', job_title: 'Electrician' },
-  { nrp: 'budi', name: 'Budi Santoso', role: 'mekanik', site: 'Binungan', job_title: 'Mekanik' },
-  { nrp: 'citra', name: 'Citra Wulandari', role: 'mekanik', site: 'Gurimbang', job_title: 'Electrician' },
-  { nrp: 'dedi', name: 'Dedi Kurniawan', role: 'mekanik', site: 'Lati', job_title: 'Mekanik' },
-  { nrp: 'eko', name: 'Eko Setiawan', role: 'mekanik', site: 'Sambarata', job_title: 'Electrician' },
-  { nrp: 'fajar', name: 'Fajar Nugroho', role: 'mekanik', site: 'Suaran', job_title: 'Mekanik' },
-  { nrp: 'hendra', name: 'Hendra Gunawan', role: 'pengawas', site: 'Binungan', job_title: 'Foreman' },
-  { nrp: 'rina', name: 'Rina Marlina', role: 'pengawas', site: 'Suaran', job_title: 'Supervisor' },
-  { nrp: 'manajer', name: 'Manajer Demo', role: 'manajemen', site: null, job_title: 'Superintendent' },
+  { nrp: 'teknisi', name: 'Teknisi Contoh', company: MTL, role: 'teknisi', site: 'Suaran', job_title: 'Electrician' },
+  { nrp: 'pengawas', name: 'Pengawas Contoh', company: BC, role: 'pengawas', site: 'Suaran', job_title: 'Foreman' },
+  { nrp: 'andi', name: 'Andi Prasetyo', company: MTL, role: 'teknisi', site: 'Suaran', job_title: 'Electrician' },
+  { nrp: 'budi', name: 'Budi Santoso', company: MTL, role: 'teknisi', site: 'Binungan', job_title: 'Mekanik' },
+  { nrp: 'citra', name: 'Citra Wulandari', company: MTL, role: 'teknisi', site: 'Gurimbang', job_title: 'Electrician' },
+  { nrp: 'dedi', name: 'Dedi Kurniawan', company: MTL, role: 'teknisi', site: 'Lati', job_title: 'Mekanik' },
+  { nrp: 'eko', name: 'Eko Setiawan', company: MTL, role: 'teknisi', site: 'Sambarata', job_title: 'Electrician' },
+  { nrp: 'fajar', name: 'Fajar Nugroho', company: MTL, role: 'teknisi', site: 'Suaran', job_title: 'Mekanik' },
+  { nrp: 'hendra', name: 'Hendra Gunawan', company: BC, role: 'pengawas', site: 'Binungan', job_title: 'Foreman' },
+  { nrp: 'rina', name: 'Rina Marlina', company: BC, role: 'pengawas', site: 'Suaran', job_title: 'Supervisor' },
+  { nrp: 'gunawan', name: 'Gunawan Hidayat', company: BC, role: 'pengawas', site: 'Gurimbang', job_title: 'Foreman' },
+  { nrp: 'lukman', name: 'Lukman Hakim', company: BC, role: 'pengawas', site: 'Lati', job_title: 'Foreman' },
+  { nrp: 'sari', name: 'Sari Wahyuni', company: BC, role: 'pengawas', site: 'Sambarata', job_title: 'Supervisor' },
 ];
 
 // batas server: 15 percobaan masuk per menit -> kalau kena batas, tunggu lalu ulangi
@@ -92,7 +101,7 @@ const tokens = {};
 for (const p of PEOPLE) {
   let r = await login(p.nrp, DEMO_PW);
   if (r.status !== 200) {
-    const c = await api('POST', '/api/users', admin.token, { nrp: p.nrp, name: p.name, role: p.role, site_id: p.site ? siteId[p.site] : null, job_title: p.job_title });
+    const c = await api('POST', '/api/users', admin.token, { nrp: p.nrp, name: p.name, role: p.role, site_id: p.site ? siteId[p.site] : null, company: p.company, job_title: p.job_title });
     if (c.status === 409) {
       const list = (await api('GET', '/api/users', admin.token)).json.items;
       const u = list.find((x) => x.nrp.toLowerCase() === p.nrp);
@@ -106,7 +115,7 @@ for (const p of PEOPLE) {
     r = await login(p.nrp, DEMO_PW);
   }
   tokens[p.nrp] = r.json.token;
-  if (p.role !== 'manajemen') await api('PUT', '/api/auth/signature', r.json.token, { signature_png: p.role === 'pengawas' ? SIG2 : SIG });
+  await api('PUT', '/api/auth/signature', r.json.token, { signature_png: p.role === 'pengawas' ? SIG2 : SIG });
 }
 console.log('akun contoh siap (password semua: ' + DEMO_PW + ')');
 
@@ -114,7 +123,9 @@ console.log('akun contoh siap (password semua: ' + DEMO_PW + ')');
 const units = (await api('GET', '/api/units', admin.token)).json;
 const cur = units.shift;
 const mechBySite = {};
-for (const p of PEOPLE.filter((x) => x.role === 'mekanik')) (mechBySite[siteId[p.site]] ||= []).push(p);
+for (const p of PEOPLE.filter((x) => x.role === 'teknisi')) (mechBySite[siteId[p.site]] ||= []).push(p);
+const supBySite = {};
+for (const p of PEOPLE.filter((x) => x.role === 'pengawas')) (supBySite[siteId[p.site]] ||= []).push(p);
 const running = units.items.filter((u) => u.status === 'running');
 const hm = Object.fromEntries(running.map((u) => [u.id, u.last_hm ?? 1000]));
 let made = 0;
@@ -133,8 +144,8 @@ for (let d = -6; d <= 0; d += 1) {
       const aChance = 0.09;
       const answers = items.map((it) => {
         const r = rnd();
-        if (it.danger_code === 'AA' && r < aaChance / 8) return { item_id: it.id, condition: rnd() < 0.7 ? 'rusak' : 'perbaiki', note: pick(NOTES.AA) };
-        if (it.danger_code === 'A' && r < aChance / 20) return { item_id: it.id, condition: rnd() < 0.6 ? 'rusak' : 'perbaiki', note: pick(NOTES.A) };
+        if (it.danger_code === 'AA' && r < aaChance / 8) return { item_id: it.id, condition: rnd() < 0.7 ? 'rusak' : 'perbaiki', note: pick(NOTES.AA), photos: [pick(PHOTOS)] };
+        if (it.danger_code === 'A' && r < aChance / 20) return { item_id: it.id, condition: rnd() < 0.6 ? 'rusak' : 'perbaiki', note: pick(NOTES.A), photos: [pick(PHOTOS)] };
         return { item_id: it.id, condition: 'baik', note: null };
       });
       const start = hm[u.id];
@@ -155,7 +166,7 @@ for (let d = -6; d <= 0; d += 1) {
       const r = await api('POST', '/api/p2h', tokens[who.nrp], body);
       if (r.status === 201) {
         made += 1;
-        if (!isNow) formsOld.push({ id: r.json.id, result: r.json.result, date });
+        if (!isNow) formsOld.push({ id: r.json.id, result: r.json.result, date, site_id: u.site_id });
       } else if (r.status === 409) dup += 1;
       else if (r.status !== 200) console.log('gagal', r.status, r.json?.error?.message);
     }
@@ -167,8 +178,10 @@ console.log(`P2H dibuat: ${made} (sudah ada: ${dup})`);
 let signed = 0;
 for (const f of formsOld) {
   if (rnd() < 0.7) {
-    const sup = f.date < addDays(cur.shift_date, -1) || rnd() < 0.5 ? 'hendra' : 'rina';
-    const r = await api('POST', `/api/p2h/${f.id}/sign`, tokens[sup], {});
+    const sups = supBySite[f.site_id] || [];
+    if (!sups.length) continue;
+    const sup = sups[Math.floor(rnd() * sups.length)].nrp; // pengawas di site yang sama
+    const r = await api('POST', `/api/p2h/${f.id}/verify`, tokens[sup], {});
     if (r.status === 200) signed += 1;
   }
 }
@@ -176,13 +189,15 @@ const open = (await api('GET', '/api/findings?status=open&limit=300', admin.toke
 let closed = 0;
 for (const f of open) {
   const ageDays = (Date.now() - new Date(f.first_seen_at || f.last_seen_at).getTime()) / 86400000;
+  const fixer = tokens[(mechBySite[f.site_id] || [])[0]?.nrp] || tokens.budi; // teknisi di site temuan itu
   if (ageDays > 1.2 && rnd() < 0.8) {
-    const r = await api('PATCH', `/api/findings/${f.id}`, tokens.budi, { status: 'closed', note: pick(['Sudah diganti dan dites jalan', 'Dikencangkan, kondisi normal', 'Dibersihkan dan diperiksa ulang', 'Komponen diganti baru']) });
+    const r = await api('PATCH', `/api/findings/${f.id}`, fixer, { status: 'closed', note: pick(['Sudah diganti dan dites jalan', 'Dikencangkan, kondisi normal', 'Dibersihkan dan diperiksa ulang', 'Komponen diganti baru']) });
     if (r.status === 200) closed += 1;
   } else if (ageDays > 0.4 && rnd() < 0.35) {
-    await api('PATCH', `/api/findings/${f.id}`, tokens.budi, { status: 'in_progress', note: 'Sedang ditangani teknisi' });
+    await api('PATCH', `/api/findings/${f.id}`, fixer, { status: 'in_progress', note: 'Sedang ditangani teknisi' });
   }
 }
 console.log(`ditandatangani pengawas: ${signed} · temuan lama ditutup: ${closed} · temuan masih terbuka: ${open.length - closed}`);
-console.log('\nMasuk dengan: andi / budi / citra / dedi / eko / fajar (mekanik), hendra / rina (pengawas), manajer (manajemen), admin');
+console.log('\nTiga akun untuk mencoba tiap peran: admin (semua site) / pengawas (site Suaran) / teknisi (site Suaran).');
+console.log('Akun lain: andi, budi, citra, dedi, eko, fajar (teknisi); hendra, rina, gunawan, lukman, sari (pengawas, tiap site).');
 console.log('Password contoh: ' + DEMO_PW + '   (admin: sesuai .env)');

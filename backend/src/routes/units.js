@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../db.js';
 import { conflict, notFound } from '../errors.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requireAuth, requireRole, scopeOf } from '../middleware/auth.js';
 import { idParam, numOrNull, parse } from '../middleware/validate.js';
 import { audit } from '../services/audit.js';
 import { getSettings } from '../services/settings.js';
@@ -38,7 +38,14 @@ const LIST_SQL = `
 r.get('/', async (req, res) => {
   const settings = await getSettings();
   const cur = currentShift(new Date(), settings.shift1_start, settings.shift2_start);
-  const rows = (await query(`${LIST_SQL} ORDER BY s.sort_order, u.code`, [cur.shift_date, cur.shift])).rows;
+  // teknisi / pengawas hanya melihat genset di site-nya
+  const scope = scopeOf(req.user);
+  const rows = (
+    await query(
+      `${LIST_SQL} ${scope != null ? 'WHERE u.site_id = $3' : ''} ORDER BY s.sort_order, u.code`,
+      scope != null ? [cur.shift_date, cur.shift, scope] : [cur.shift_date, cur.shift],
+    )
+  ).rows;
   const items = rows.map((u) => ({
     ...u,
     // hour meter terakhir yang diketahui: HM akhir / awal form terakhir, kalau belum ada pakai data PMMR

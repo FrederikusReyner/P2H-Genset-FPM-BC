@@ -1186,17 +1186,21 @@ select.input {
 }
 .sigprev {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: 8px 14px;
   padding: 10px 12px;
   border: 1.5px solid var(--line-2);
   border-radius: var(--r);
   background: #ffffff;
 }
 .sigprev img {
+  flex: 0 0 auto;
+  max-width: 100%;
   max-height: 80px;
   width: auto;
 }
 .sigprev .small {
+  flex: 1 1 180px;
   color: #5c6252;
 }

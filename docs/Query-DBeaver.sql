@@ -97,11 +97,13 @@ SELECT f.shift_date AS "Tanggal",
        CASE f.shift WHEN 1 THEN 'I' ELSE 'II' END AS "Shift",
        f.site_name AS "Site",
        f.unit_code AS "Unit",
-       f.inspector_name AS "Mekanik",
+       f.inspector_name AS "Teknisi",
+       f.inspector_company AS "Perusahaan",
        CASE f.result WHEN 'baik' THEN 'Baik' WHEN 'temuan_a' THEN 'Temuan A' ELSE 'STOP (AA)' END AS "Hasil",
        f.n_aa AS "Temuan AA",
        f.n_a AS "Temuan A",
-       CASE WHEN f.sup_signed_at IS NULL THEN 'Belum' ELSE f.sup_name END AS "Tanda tangan pengawas",
+       (SELECT count(*) FROM p2h_photos ph WHERE ph.form_id = f.id) AS "Jumlah foto",
+       CASE WHEN f.sup_signed_at IS NULL THEN 'Menunggu verifikasi' ELSE 'Terverifikasi: ' || f.sup_name END AS "Status verifikasi",
        to_char(COALESCE(f.filled_at, f.submitted_at) AT TIME ZONE 'Asia/Makassar', 'DD-MM-YYYY HH24:MI') AS "Waktu isi (WITA)"
   FROM p2h_forms f
  ORDER BY f.shift_date DESC, f.shift DESC, f.id DESC
@@ -151,12 +153,12 @@ SELECT replace(a.item_text, '**', '') AS "Butir",
  LIMIT 15;
 
 
--- 8. P2H LAMA YANG BELUM DITANDATANGANI PENGAWAS
+-- 8. P2H LAMA YANG BELUM DIVERIFIKASI PENGAWAS (belum berstatus Terverifikasi)
 SELECT f.shift_date AS "Tanggal",
        CASE f.shift WHEN 1 THEN 'I' ELSE 'II' END AS "Shift",
        f.site_name AS "Site",
        f.unit_code AS "Unit",
-       f.inspector_name AS "Mekanik",
+       f.inspector_name AS "Teknisi",
        CASE f.result WHEN 'baik' THEN 'Baik' WHEN 'temuan_a' THEN 'Temuan A' ELSE 'STOP (AA)' END AS "Hasil"
   FROM p2h_forms f
  WHERE f.sup_signed_at IS NULL
@@ -166,8 +168,10 @@ SELECT f.shift_date AS "Tanggal",
 
 
 -- 9. DAFTAR PENGGUNA (tanpa password)
-SELECT u.nrp AS "ID karyawan",
+SELECT u.nrp AS "No SID",
        u.name AS "Nama",
+       u.company AS "Perusahaan",
+       u.job_title AS "Jabatan",
        u.role AS "Peran",
        s.name AS "Site",
        CASE WHEN u.is_active THEN 'Aktif' ELSE 'Nonaktif' END AS "Status",
@@ -192,7 +196,7 @@ SELECT to_char(created_at AT TIME ZONE 'Asia/Makassar', 'DD-MM-YYYY HH24:MI') AS
 
 
 -- 11. HP YANG TERDAFTAR UNTUK NOTIFIKASI (fail_count tinggi = HP tidak terjangkau lagi)
-SELECT u.nrp AS "ID karyawan",
+SELECT u.nrp AS "No SID",
        u.name AS "Nama",
        left(coalesce(p.user_agent, ''), 60) AS "Jenis HP / browser",
        to_char(p.created_at AT TIME ZONE 'Asia/Makassar', 'DD-MM-YYYY HH24:MI') AS "Didaftarkan",
@@ -213,3 +217,25 @@ SELECT relname AS "Tabel",
 
 -- 13. UKURAN SELURUH DATABASE
 SELECT pg_size_pretty(pg_database_size(current_database())) AS "Ukuran seluruh database";
+
+
+-- 14. FOTO TEMUAN: jumlah dan ukuran per bulan (foto disimpan di database, jadi ikut memakan ruang)
+SELECT to_char(created_at AT TIME ZONE 'Asia/Makassar', 'YYYY-MM') AS "Bulan",
+       count(*) AS "Jumlah foto",
+       pg_size_pretty(sum(size)::bigint) AS "Total ukuran",
+       pg_size_pretty(avg(size)::bigint) AS "Rata-rata per foto"
+  FROM p2h_photos
+ GROUP BY 1
+ ORDER BY 1 DESC;
+
+
+-- 15. HAK PER SITE: pengguna aktif per site dan peran (teknisi / pengawas hanya melihat site-nya)
+SELECT coalesce(s.name, '(semua site: admin)') AS "Site",
+       count(*) FILTER (WHERE u.role = 'teknisi') AS "Teknisi",
+       count(*) FILTER (WHERE u.role = 'pengawas') AS "Pengawas",
+       count(*) FILTER (WHERE u.role = 'admin') AS "Admin"
+  FROM users u
+  LEFT JOIN sites s ON s.id = u.site_id
+ WHERE u.is_active
+ GROUP BY s.name, s.sort_order
+ ORDER BY s.sort_order NULLS LAST;

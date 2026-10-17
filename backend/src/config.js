@@ -44,8 +44,12 @@ export const config = {
   jwtSecret,
   jwtExpiresIn: env.JWT_EXPIRES_IN || '30d',
   corsOrigins: list(env.CORS_ORIGINS),
-  // alamat web (Vercel) dipakai untuk tautan di notifikasi
-  appUrl: (env.APP_URL || list(env.CORS_ORIGINS)[0] || 'http://localhost:5173').replace(/\/+$/, ''),
+  // alamat aplikasi (dipakai untuk tautan di notifikasi). Di Render otomatis terisi RENDER_EXTERNAL_URL.
+  appUrl: (env.APP_URL || env.RENDER_EXTERNAL_URL || list(env.CORS_ORIGINS)[0] || 'http://localhost:5173').replace(/\/+$/, ''),
+  // folder hasil build tampilan web; kalau ada, server ini ikut menyajikan aplikasinya (satu layanan untuk web + server)
+  webDir: env.WEB_DIR ? path.resolve(env.WEB_DIR) : path.resolve(root, '..', 'frontend', 'dist'),
+  // sertifikat CA database (Aiven menyediakannya); kosong = tetap terenkripsi tapi tanpa pemeriksaan sertifikat
+  databaseCa: String(env.DATABASE_CA || '').replace(/\\n/g, '\n').trim(),
   vapid: {
     publicKey: env.VAPID_PUBLIC_KEY || '',
     privateKey: env.VAPID_PRIVATE_KEY || '',

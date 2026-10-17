@@ -125,6 +125,9 @@ export async function buildFormPdf(id) {
         ? { t: 'HASIL: ADA TEMUAN (A)', c: AMBER }
         : { t: 'HASIL: SEMUA BAIK', c: '#2E7D14' };
   txt(doc, chip.t, M + 64, y + 26, CW - 128, { size: 8, font: FB, align: 'center', color: chip.c });
+  txt(doc, data.verified ? `STATUS: ${data.verify_text}` : `STATUS: ${data.verify_text}`, M + 64, y + 38, CW - 128, {
+    size: 7, font: FB, align: 'center', color: data.verified ? '#2E7D14' : '#777777',
+  });
   y += HEADER_H;
 
   /* ---------- identitas ---------- */
@@ -263,18 +266,27 @@ export async function buildFormPdf(id) {
   const w2 = 148;
   const w3 = CW - w1 - w2;
   const sx = [M, M + w1, M + w1 + w2];
-  const drawSign = (x, w, titleLines, sign, roleLabel) => {
+  const drawSign = (x, w, titleLines, sign, roleLabel, pendingText) => {
     box(doc, x, y, w, SIGN_H);
     txt(doc, 'Tanda Tangan', x + 4, y + 3, w - 8, { size: 7.4, font: FI });
     txt(doc, titleLines, x + 4, y + 11.6, w - 8, { size: 7.4, font: FI });
-    if (sign?.img) doc.image(sign.img, x + 14, y + 20, { fit: [w - 28, 36], align: 'center', valign: 'center' });
+    if (sign?.img) doc.image(sign.img, x + 14, y + 19, { fit: [w - 28, 30], align: 'center', valign: 'center' });
+    else if (pendingText) txt(doc, pendingText, x + 4, y + 30, w - 8, { size: 7, font: FB, align: 'center', color: '#8A8A80' });
     const nm = sign?.name ? `( ${sign.name} )` : '(                                         )';
-    txt(doc, nm, x + 4, y + SIGN_H - 22, w - 8, { size: 7.8, font: FB, align: 'center' });
-    txt(doc, roleLabel, x + 4, y + SIGN_H - 12, w - 8, { size: 7, font: FI, align: 'center' });
-    if (sign?.at) txt(doc, sign.at, x + 4, y + 3, w - 8, { size: 5.8, color: '#666666', align: 'right' });
+    txt(doc, nm, x + 4, y + 51, w - 8, { size: 7.8, font: FB, align: 'center' });
+    txt(doc, roleLabel + (sign?.nrp ? ` · SID ${sign.nrp}` : ''), x + 4, y + 61, w - 8, { size: 6.8, font: FI, align: 'center' });
+    if (sign?.company) txt(doc, sign.company, x + 4, y + 69, w - 8, { size: 6.4, align: 'center', color: '#444444' });
+    if (sign?.at) {
+      if (sign.verified) {
+        txt(doc, 'TERVERIFIKASI', x + 4, y + 3, w - 8, { size: 6.2, font: FB, color: '#2E7D14', align: 'right' });
+        txt(doc, sign.at, x + 4, y + 76.5, w - 8, { size: 5.8, color: '#2E7D14', align: 'center' });
+      } else {
+        txt(doc, sign.at, x + 4, y + 3, w - 8, { size: 5.8, color: '#666666', align: 'right' });
+      }
+    }
   };
-  drawSign(sx[0], w1, 'Mekanik/Electrician', data.sign_mek, 'Mekanik/Electrician');
-  drawSign(sx[1], w2, 'Foreman / Spv', data.sign_sup, 'Pengawas/PJA');
+  drawSign(sx[0], w1, 'Teknisi (Mekanik / Electrician)', data.sign_mek, 'Teknisi');
+  drawSign(sx[1], w2, 'Pengawas (Foreman / Spv)', data.sign_sup, 'Pengawas', 'MENUNGGU VERIFIKASI');
 
   box(doc, sx[2], y, w3, SIGN_H);
   txt(doc, 'INFO TAMBAHAN dan TINDAK LANJUT :', sx[2] + 4, y + 3, w3 - 8, { size: 7.4, font: FB });
@@ -318,6 +330,47 @@ export async function buildFormPdf(id) {
   txt(doc, `Dikirim ${data.stamp} · dibuat oleh aplikasi P2H Genset`, PAGE_W - M - 230, fy, 230, {
     size: 6.4, color: '#777777', align: 'right',
   });
+
+  /* ---------- lampiran foto temuan (hanya bila ada foto) ---------- */
+  const withPhotos = data.findings.filter((x) => x.images.length);
+  if (withPhotos.length) {
+    doc.addPage();
+    let py = M;
+    txt(doc, 'LAMPIRAN FOTO TEMUAN', M, py, CW, { size: 13, font: FB });
+    txt(doc, `${data.header.no_unit} · ${data.header.hari_tgl} · Shift ${data.header.shift} · ${data.header.site}`, M, py + 17, CW, { size: 8, color: '#444444' });
+    py += 36;
+    const gap = 8;
+    const cw3 = (CW - 2 * gap) / 3;
+    const ph = cw3 * 0.75;
+    for (const fd of withPhotos) {
+      const title = `[${fd.code}] ${fd.text} — ${fd.condition}${fd.note ? ': ' + fd.note : ''}`;
+      const th = measure(doc, title, CW, 8.4, FB);
+      if (py + th + 4 + ph > PAGE_H - M - 14) {
+        doc.addPage();
+        py = M;
+      }
+      doc.font(FB).fontSize(8.4).fillColor(fd.code === 'AA' ? RED : '#111111').text(title, M, py, { width: CW });
+      py += th + 4;
+      for (let i = 0; i < fd.images.length; i += 3) {
+        if (py + ph > PAGE_H - M - 14) {
+          doc.addPage();
+          py = M;
+        }
+        fd.images.slice(i, i + 3).forEach((im, k) => {
+          const x = M + k * (cw3 + gap);
+          box(doc, x, py, cw3, ph, { stroke: '#C9CDBF' });
+          try {
+            doc.image(im.buffer, x + 1, py + 1, { fit: [cw3 - 2, ph - 2], align: 'center', valign: 'center' });
+          } catch {
+            txt(doc, 'foto tidak bisa dicetak', x, py + ph / 2 - 4, cw3, { size: 7, align: 'center', color: '#777777' });
+          }
+        });
+        py += ph + gap;
+      }
+      py += 4;
+    }
+    txt(doc, `P2H #${f.id} · ${data.header.no_unit} · lampiran foto`, M, PAGE_H - M - 4, CW, { size: 6.4, color: '#777777' });
+  }
 
   doc.end();
   return { buffer: await done, filename: `${data.filename}.pdf` };

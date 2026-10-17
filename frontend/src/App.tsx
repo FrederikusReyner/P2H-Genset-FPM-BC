@@ -14,6 +14,7 @@ const P2HDetailPage = lazy(() => import('./pages/P2HDetail'));
 const FindingsPage = lazy(() => import('./pages/Findings'));
 const UnitsPage = lazy(() => import('./pages/Units'));
 const NotificationsPage = lazy(() => import('./pages/Notifications'));
+const RekapPage = lazy(() => import('./pages/Rekap'));
 const NewP2HPage = lazy(() => import('./pages/P2HForm').then((m) => ({ default: m.NewP2HPage })));
 const EditP2HPage = lazy(() => import('./pages/P2HForm').then((m) => ({ default: m.EditP2HPage })));
 const UsersPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.UsersPage })));
@@ -75,6 +76,7 @@ export default function App() {
                 </RequireRole>
               }
             />
+            <Route path="rekap" element={<RekapPage />} />
             <Route path="temuan" element={<FindingsPage />} />
             <Route path="unit" element={<UnitsPage />} />
             <Route path="notifikasi" element={<NotificationsPage />} />

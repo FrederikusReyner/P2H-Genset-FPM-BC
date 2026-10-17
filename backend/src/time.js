@@ -80,3 +80,60 @@ export function stampWITA(v) {
 }
 
 export const shiftLabel = (s) => (Number(s) === 1 ? 'I' : 'II');
+
+/* ---------- periode rekap: mingguan / bulanan / tahunan ---------- */
+
+export const PERIODS = ['week', 'month', 'year'];
+export const PERIOD_LABEL = { week: 'Mingguan', month: 'Bulanan', year: 'Tahunan' };
+const pad2 = (n) => String(n).padStart(2, '0');
+const BULAN_PENDEK = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+const HARI_PENDEK = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+/** Tanggal "YYYY-MM-DD" -> hari dalam minggu, Senin = 0 ... Minggu = 6. */
+export function weekdayIndex(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+}
+
+/**
+ * Rentang tanggal sebuah periode yang memuat tanggal `anchor`.
+ *  - week : Senin sampai Minggu
+ *  - month: tanggal 1 sampai akhir bulan
+ *  - year : 1 Januari sampai 31 Desember
+ */
+export function periodRange(period, anchor) {
+  const [y, m] = anchor.split('-').map(Number);
+  if (period === 'week') {
+    const from = addDays(anchor, -weekdayIndex(anchor));
+    return { from, to: addDays(from, 6) };
+  }
+  if (period === 'month') {
+    const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return { from: `${y}-${pad2(m)}-01`, to: `${y}-${pad2(m)}-${pad2(last)}` };
+  }
+  return { from: `${y}-01-01`, to: `${y}-12-31` };
+}
+
+/** "12-18 Oktober 2026" / "Oktober 2026" / "Tahun 2026" untuk judul rekap. */
+export function periodTitle(period, from, to) {
+  if (period === 'year') return `Tahun ${from.slice(0, 4)}`;
+  if (period === 'month') return longDate(from).replace(/^1 /, '');
+  return `${longDate(from)} s.d. ${longDate(to)}`;
+}
+
+/** Label singkat satu hari untuk tabel rincian: "Sen 12 Okt". */
+export function dayShort(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return `${HARI_PENDEK[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${d} ${BULAN_PENDEK[m - 1]}`;
+}
+
+export function monthShort(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  return `${BULAN_PENDEK[m - 1]} ${y}`;
+}
+
+export function rangeShort(from, to) {
+  const [, m1, d1] = from.split('-').map(Number);
+  const [, m2, d2] = to.split('-').map(Number);
+  return m1 === m2 ? `${d1}-${d2} ${BULAN_PENDEK[m1 - 1]}` : `${d1} ${BULAN_PENDEK[m1 - 1]} - ${d2} ${BULAN_PENDEK[m2 - 1]}`;
+}

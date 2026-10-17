@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { config } from '../../config.js';
-import { loadForm } from '../../routes/p2h.js';
+import { loadForm, loadFormPhotoFiles } from '../../routes/p2h.js';
 import { dayNameID, longDate, shiftLabel, shortDate, stampWITA } from '../../time.js';
 import { CONDITION_LABEL, FIX_LABEL, RESULT_LABEL, plain } from '../../text.js';
 
@@ -21,6 +21,31 @@ export function asset(name) {
 /** Angka gaya Indonesia tanpa pemisah ribuan: 26630 / 26630,5 */
 export const fmtNum = (v) =>
   v === null || v === undefined || v === '' ? '' : Number(v).toLocaleString('id-ID', { useGrouping: false, maximumFractionDigits: 2 });
+
+/** Lebar x tinggi gambar JPEG / PNG (piksel), dibaca dari kepala berkas. */
+export function imageSize(buf) {
+  try {
+    if (buf[0] === 0x89 && buf[1] === 0x50) return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+    let i = 2;
+    while (i < buf.length) {
+      if (buf[i] !== 0xff) return null;
+      const marker = buf[i + 1];
+      const len = buf.readUInt16BE(i + 2);
+      if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker)) return { h: buf.readUInt16BE(i + 5), w: buf.readUInt16BE(i + 7) };
+      i += 2 + len;
+    }
+  } catch {
+    /* tidak terbaca */
+  }
+  return null;
+}
+
+/** Ukuran muat dalam kotak maxW x maxH dengan perbandingan tetap. */
+export function fitSize(buf, maxW, maxH) {
+  const s = imageSize(buf) || { w: 4, h: 3 };
+  const k = Math.min(maxW / s.w, maxH / s.h);
+  return { width: Math.max(1, Math.round(s.w * k)), height: Math.max(1, Math.round(s.h * k)) };
+}
 
 export function pngBuffer(dataUrl) {
   if (!dataUrl) return null;
@@ -45,11 +70,13 @@ export async function formExportData(id) {
   if (!d) return null;
   const f = d.form;
 
+  const photoFiles = await loadFormPhotoFiles(f.id);
   const findings = [];
   for (const s of d.sections) {
     for (const it of s.items) {
       if (it.condition === 'baik') continue;
       findings.push({
+        images: photoFiles.get(it.id) || [],
         code: it.danger_code,
         text: plain(it.item_text),
         condition: CONDITION_LABEL[it.condition],
@@ -106,14 +133,17 @@ export async function formExportData(id) {
     findings,
     result: f.result,
     result_label: RESULT_LABEL[f.result],
+    verified: !!f.sup_signed_at,
+    verify_text: f.sup_signed_at ? `TERVERIFIKASI oleh ${f.sup_name} · ${stampWITA(f.sup_signed_at)}` : 'MENUNGGU VERIFIKASI PENGAWAS',
     sign_mek: {
       name: f.inspector_name,
+      company: f.inspector_company || '',
       nrp: f.inspector_nrp || '',
       img: pngBuffer(f.signature_png),
       at: stampWITA(f.filled_at || f.submitted_at),
     },
     sign_sup: f.sup_signed_at
-      ? { name: f.sup_name, nrp: f.sup_nrp || '', img: pngBuffer(f.sup_signature_png), at: stampWITA(f.sup_signed_at) }
+      ? { name: f.sup_name, company: f.sup_company || '', nrp: f.sup_nrp || '', img: pngBuffer(f.sup_signature_png), at: stampWITA(f.sup_signed_at), verified: true }
       : null,
     stamp: stampWITA(f.filled_at || f.submitted_at),
     long_date: longDate(f.shift_date),

@@ -43,4 +43,6 @@ const stop = async () => {
 };
 process.on('SIGINT', stop);
 process.on('SIGTERM', stop);
+process.on('SIGHUP', stop); // jendela ditutup
+process.on('SIGBREAK', stop);
 setInterval(() => {}, 1 << 30);

@@ -3,12 +3,12 @@ import { config } from '../config.js';
 import { query } from '../db.js';
 import { forbidden, unauthorized } from '../errors.js';
 
-export const ROLES = ['mekanik', 'pengawas', 'manajemen', 'admin'];
-export const CAN_FILL = ['mekanik', 'pengawas', 'admin']; // boleh mengisi P2H
-export const CAN_SIGN = ['pengawas', 'admin']; // boleh tanda tangan pengawas
-export const CAN_FIX = ['mekanik', 'pengawas', 'admin']; // boleh memperbarui tindak lanjut temuan
+export const ROLES = ['teknisi', 'pengawas', 'admin'];
+export const CAN_FILL = ['teknisi', 'admin']; // boleh mengisi P2H
+export const CAN_SIGN = ['pengawas', 'admin']; // boleh memverifikasi (tanda tangan pengawas)
+export const CAN_FIX = ['teknisi', 'pengawas', 'admin']; // boleh memperbarui tindak lanjut temuan
 
-const USER_COLS = `id, nrp, name, role, site_id, job_title, phone, is_active, must_change_password,
+const USER_COLS = `id, nrp, name, role, site_id, company, job_title, phone, is_active, must_change_password,
   token_version, notif_mode, notif_site_ids, notif_seen_id, (signature_png IS NOT NULL) AS has_signature`;
 
 export function signToken(user) {
@@ -39,6 +39,12 @@ export const requireRole =
     next();
   };
 
+/**
+ * Batas site: admin melihat semua site (null). Teknisi dan pengawas hanya site-nya sendiri.
+ * Akun yang belum diberi site mendapat -1, yang tidak cocok dengan site mana pun (jadi tidak melihat apa-apa).
+ */
+export const scopeOf = (u) => (u.role === 'admin' ? null : (u.site_id ?? -1));
+
 /** Data pengguna yang aman dikirim ke HP. */
 export function publicUser(u, extra = {}) {
   return {
@@ -47,6 +53,7 @@ export function publicUser(u, extra = {}) {
     name: u.name,
     role: u.role,
     site_id: u.site_id,
+    company: u.company ?? null,
     job_title: u.job_title ?? null,
     phone: u.phone ?? null,
     must_change_password: !!u.must_change_password,

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query, tx } from '../db.js';
 import { conflict, notFound, unprocessable } from '../errors.js';
-import { CAN_FIX, requireAuth, requireRole } from '../middleware/auth.js';
+import { CAN_FIX, requireAuth, requireRole, scopeOf } from '../middleware/auth.js';
 import { idParam, parse } from '../middleware/validate.js';
 import { audit } from '../services/audit.js';
 import { notifyEvent } from '../services/push.js';
@@ -53,12 +53,16 @@ export const OPEN_FINDINGS_SQL = `
               AND (a2.item_id IS NOT DISTINCT FROM g.item_id)
               AND (a2.section_code = g.section_code AND a2.item_no = g.item_no OR g.item_id IS NOT NULL)
               AND (f2.shift_date, f2.shift) > (g.shift_date, g.shift)
-         ) AS maybe_fixed
+         ) AS maybe_fixed,
+         (SELECT COALESCE(array_agg(p.id::int ORDER BY p.id DESC), '{}'::int[])
+            FROM p2h_photos p JOIN base b2 ON b2.id = p.answer_id
+           WHERE b2.unit_id = g.unit_id AND b2.item_key = g.item_key) AS photo_ids
     FROM grp g`;
 
 r.get('/', async (req, res) => {
   const status = ['open', 'closed'].includes(req.query.status) ? req.query.status : 'open';
-  const siteId = Number(req.query.site_id) || null;
+  const scope = scopeOf(req.user); // teknisi / pengawas: hanya site-nya
+  const siteId = scope != null ? scope : Number(req.query.site_id) || null;
   const unitId = Number(req.query.unit_id) || null;
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 100, 1), 300);
   const settings = await getSettings();
@@ -136,7 +140,8 @@ r.patch('/:id', requireRole(...CAN_FIX), async (req, res) => {
         [id],
       )
     ).rows[0];
-    if (!a || a.condition === 'baik') throw notFound('Temuan tidak ditemukan.');
+    const scope = scopeOf(req.user);
+    if (!a || a.condition === 'baik' || (scope != null && a.site_id !== scope)) throw notFound('Temuan tidak ditemukan.');
     if (a.fix_status === 'closed') throw conflict('Temuan ini sudah ditandai selesai.');
 
     const upd = await c.query(

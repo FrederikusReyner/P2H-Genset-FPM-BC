@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import { SignaturePad } from '../components/SignaturePad';
+import { PhotoPicker } from '../components/Photos';
 import { DangerCode, Empty, ErrorBox, Field, ResultChip, SectionTitle, Segmented, Spinner } from '../components/ui';
 import { ApiError, api, downloadFile } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -10,6 +11,7 @@ import { safeDel, safeGet, safeSet } from '../lib/cache';
 import { addDays, dayName, locationOf, modelOf, num, parseNum, segments, shiftLabel, shortDate, todayWita, unitTitle } from '../lib/format';
 import { useMeta, useOnline, useUnits } from '../lib/hooks';
 import { enqueue } from '../lib/outbox';
+import { MAX_PHOTOS, clearDraftPhotos, compressImage, loadDraftPhotos, saveDraftPhotos } from '../lib/photos';
 import type { ChecklistItem, ChecklistSection, Condition, FormDetail, Meta, P2HPayload, ResultKind, Unit } from '../lib/types';
 
 /* =====================================================================
@@ -26,7 +28,8 @@ interface FormState {
   jobSite: string;
   hmStart: string;
   hmEnd: string;
-  answers: Record<number, { c: Condition | null; note: string }>;
+  /** photos = foto baru (data URL); keep = nomor foto lama di server yang dipertahankan (saat ubah P2H) */
+  answers: Record<number, { c: Condition | null; note: string; photos: string[]; keep: number[] }>;
   params: Record<string, { idle: string; load: string }>;
   notes: string;
   signature: string | null; // gambar baru (dari kotak tanda tangan)
@@ -36,6 +39,8 @@ interface FormState {
 }
 
 const DRAFT_KEY = (uid: number) => `p2h.draft.v2.${uid}`;
+const NO_PHOTOS: string[] = [];
+const NO_KEEP: number[] = [];
 const newUuid = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}-4000-8000-000000000000`);
 
 function blankState(meta: Meta, unitId: number | null): FormState {
@@ -147,7 +152,8 @@ function P2HFormBody({
           const fresh = Date.now() - d.startedAt < 20 * 3600_000;
           const sameUnit = !presetUnit || d.unitId === presetUnit;
           if (fresh && sameUnit && Object.keys(d.answers || {}).length > 0) {
-            return { state: { ...blank, ...d, params: { ...blank.params, ...d.params } }, restored: true };
+            const answers = Object.fromEntries(Object.entries(d.answers).map(([k, a]) => [k, { ...a, photos: a.photos ?? [], keep: a.keep ?? [] }]));
+            return { state: { ...blank, ...d, answers, params: { ...blank.params, ...d.params } }, restored: true };
           }
         }
       } catch {
@@ -159,15 +165,42 @@ function P2HFormBody({
   }, []);
   const [restored, setRestored] = useState(init.restored);
   const [st, setSt] = useState<FormState>(init.state);
+  const stRef = useRef(st);
+  stRef.current = st;
 
   // simpan draf (hanya form baru)
   const saveTimer = useRef<number | undefined>(undefined);
   useEffect(() => {
     if (mode !== 'create' || !user) return;
     window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => safeSet(DRAFT_KEY(user.id), JSON.stringify(st)), 500);
+    saveTimer.current = window.setTimeout(() => {
+      const lite = { ...st, answers: Object.fromEntries(Object.entries(st.answers).map(([k, a]) => [k, { ...a, photos: [] }])) };
+      safeSet(DRAFT_KEY(user.id), JSON.stringify(lite));
+      void saveDraftPhotos(
+        user.id,
+        Object.fromEntries(Object.entries(st.answers).filter(([, a]) => a.photos?.length).map(([k, a]) => [Number(k), a.photos])),
+      );
+    }, 500);
     return () => window.clearTimeout(saveTimer.current);
   }, [st, mode, user]);
+
+  // draf yang dipulihkan: ambil juga foto-fotonya
+  useEffect(() => {
+    if (mode !== 'create' || !user || !init.restored) return undefined;
+    let alive = true;
+    void loadDraftPhotos(user.id).then((m) => {
+      if (!alive || !m) return;
+      setSt((s) => {
+        const a = { ...s.answers };
+        for (const [k, ph] of Object.entries(m)) if (a[Number(k)]) a[Number(k)] = { ...a[Number(k)], photos: ph };
+        return { ...s, answers: a };
+      });
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const unit: Unit | undefined = useMemo(() => units.find((u) => u.id === st.unitId), [units, st.unitId]);
   const set = useCallback(<K extends keyof FormState>(k: K, v: FormState[K]) => setSt((s) => ({ ...s, [k]: v })), []);
@@ -185,16 +218,54 @@ function P2HFormBody({
   }, [unit?.id]);
 
   const setAnswer = useCallback((id: number, c: Condition) => {
-    setSt((s) => ({ ...s, answers: { ...s.answers, [id]: { c, note: s.answers[id]?.note ?? '' } } }));
+    setSt((s) => ({ ...s, answers: { ...s.answers, [id]: { ...s.answers[id], photos: s.answers[id]?.photos ?? NO_PHOTOS, keep: s.answers[id]?.keep ?? NO_KEEP, c, note: s.answers[id]?.note ?? '' } } }));
   }, []);
   const setNote = useCallback((id: number, note: string) => {
-    setSt((s) => ({ ...s, answers: { ...s.answers, [id]: { c: s.answers[id]?.c ?? null, note } } }));
+    setSt((s) => ({ ...s, answers: { ...s.answers, [id]: { ...s.answers[id], photos: s.answers[id]?.photos ?? NO_PHOTOS, keep: s.answers[id]?.keep ?? NO_KEEP, c: s.answers[id]?.c ?? null, note } } }));
   }, []);
   const setAllGood = useCallback((sec: ChecklistSection) => {
     setSt((s) => {
       const a = { ...s.answers };
-      for (const it of sec.items) if (it.is_active) a[it.id] = { c: 'baik', note: '' };
+      for (const it of sec.items) if (it.is_active) a[it.id] = { c: 'baik', note: '', photos: NO_PHOTOS, keep: NO_KEEP };
       return { ...s, answers: a };
+    });
+  }, []);
+
+  /* ---- foto temuan ---- */
+  const [photoBusy, setPhotoBusy] = useState<number | null>(null);
+  const [photoErr, setPhotoErr] = useState<string | null>(null);
+  const addPhotos = useCallback(async (id: number, files: File[]) => {
+    setPhotoErr(null);
+    setPhotoBusy(id);
+    try {
+      const cur = stRef.current.answers[id];
+      const room = MAX_PHOTOS - ((cur?.photos.length ?? 0) + (cur?.keep.length ?? 0));
+      for (const file of files.slice(0, Math.max(0, room))) {
+        const data = await compressImage(file);
+        setSt((s) => {
+          const a = s.answers[id] ?? { c: null, note: '', photos: NO_PHOTOS, keep: NO_KEEP };
+          if (a.photos.length + a.keep.length >= MAX_PHOTOS) return s;
+          return { ...s, answers: { ...s.answers, [id]: { ...a, photos: [...a.photos, data] } } };
+        });
+      }
+    } catch (e) {
+      setPhotoErr(e instanceof Error ? e.message : 'Foto gagal diproses. Coba lagi.');
+    } finally {
+      setPhotoBusy(null);
+    }
+  }, []);
+  const removePhoto = useCallback((id: number, index: number) => {
+    setSt((s) => {
+      const a = s.answers[id];
+      if (!a) return s;
+      return { ...s, answers: { ...s.answers, [id]: { ...a, photos: a.photos.filter((_, i) => i !== index) } } };
+    });
+  }, []);
+  const removeKept = useCallback((id: number, photoId: number) => {
+    setSt((s) => {
+      const a = s.answers[id];
+      if (!a) return s;
+      return { ...s, answers: { ...s.answers, [id]: { ...a, keep: a.keep.filter((x) => x !== photoId) } } };
     });
   }, []);
 
@@ -237,8 +308,9 @@ function P2HFormBody({
       if (!a?.c) {
         unanswered += 1;
         if (!firstUnanswered) firstUnanswered = `item-${it.id}`;
-      } else if (a.c !== 'baik' && a.note.trim().length < 3) {
-        e.push({ key: `item-${it.id}`, msg: `${it.section.title} no. ${it.no}: tulis catatan singkat (apa yang rusak).` });
+      } else if (a.c !== 'baik') {
+        if (a.note.trim().length < 3) e.push({ key: `item-${it.id}`, msg: `${it.section.title} no. ${it.no}: tulis catatan singkat (apa yang rusak).` });
+        if ((a.photos?.length ?? 0) + (a.keep?.length ?? 0) < 1) e.push({ key: `item-${it.id}`, msg: `${it.section.title} no. ${it.no}: lampirkan foto kerusakan (wajib).` });
       }
     }
     if (unanswered > 0 && firstUnanswered) e.push({ key: firstUnanswered, msg: `Masih ada ${unanswered} butir cek yang belum diisi (ketuk untuk ke yang pertama).` });
@@ -255,6 +327,11 @@ function P2HFormBody({
     return e;
   }, [mode, st, items, meta, user, detail]);
 
+  // setelah muncul "Belum bisa dikirim", daftar kekurangan ikut diperbarui langsung saat isian dilengkapi
+  useEffect(() => {
+    setErrors((cur) => (cur.length ? validate() : cur));
+  }, [validate]);
+
   const buildPayload = (): P2HPayload => {
     const params: P2HPayload['params'] = {};
     for (const p of meta.params) {
@@ -269,7 +346,16 @@ function P2HFormBody({
       hm_start: parseNum(st.hmStart),
       hm_end: parseNum(st.hmEnd),
       params,
-      answers: items.map((it) => ({ item_id: it.id, condition: st.answers[it.id]!.c as Condition, note: st.answers[it.id]!.c === 'baik' ? null : st.answers[it.id]!.note.trim() })),
+      answers: items.map((it) => {
+        const a = st.answers[it.id]!;
+        const bad = a.c !== 'baik';
+        return {
+          item_id: it.id,
+          condition: a.c as Condition,
+          note: bad ? a.note.trim() : null,
+          ...(bad ? { photos: a.photos ?? [], keep_photo_ids: a.keep ?? [] } : {}),
+        };
+      }),
       notes: st.notes.trim() || null,
       signature_png: st.signature || (st.sigMode === 'saved' ? user?.signature_png ?? null : null),
       use_saved_signature: useSaved,
@@ -307,12 +393,15 @@ function P2HFormBody({
     setBusy(true);
     try {
       if (mode === 'edit') {
-        const r = await api.put<{ id: number; result: ResultKind }>(`/api/p2h/${detail!.form.id}`, payload);
+        const r = await api.put<{ id: number; result: ResultKind }>(`/api/p2h/${detail!.form.id}`, payload, { timeout: 120_000 });
         await invalidate();
         setDone({ kind: 'sent', id: r.id, result: r.result, edited: true });
       } else {
-        const r = await api.post<{ id: number; result: ResultKind; duplicate?: boolean }>('/api/p2h', payload);
-        if (user) safeDel(DRAFT_KEY(user.id));
+        const r = await api.post<{ id: number; result: ResultKind; duplicate?: boolean }>('/api/p2h', payload, { timeout: 120_000 });
+        if (user) {
+          safeDel(DRAFT_KEY(user.id));
+          void clearDraftPhotos(user.id);
+        }
         if (payload.save_signature && payload.signature_png && user) setUser({ ...user, signature_png: payload.signature_png, has_signature: true });
         await invalidate();
         setDone({ kind: 'sent', id: r.id, result: r.result });
@@ -325,7 +414,10 @@ function P2HFormBody({
           payload,
           label: `${unit?.code ?? 'P2H'} · Shift ${shiftLabel(st.shift)} · ${shortDate(st.date)}`,
         });
-        if (user) safeDel(DRAFT_KEY(user.id));
+        if (user) {
+          safeDel(DRAFT_KEY(user.id));
+          void clearDraftPhotos(user.id);
+        }
         setDone({ kind: 'queued', result: summary.result });
       } else if (err instanceof ApiError) {
         const existing = (err.details as { existing_form_id?: number } | undefined)?.existing_form_id ?? null;
@@ -350,7 +442,10 @@ function P2HFormBody({
   }
 
   const discardDraft = () => {
-    if (user) safeDel(DRAFT_KEY(user.id));
+    if (user) {
+      safeDel(DRAFT_KEY(user.id));
+      void clearDraftPhotos(user.id);
+    }
     setSt(blankState(meta, presetUnit ?? null));
     setRestored(false);
     setErrors([]);
@@ -388,6 +483,15 @@ function P2HFormBody({
         <div className="banner banner--warn" role="status">
           <Icon name="wifiOff" size={18} />
           <div className="grow">Tidak ada sinyal. Anda tetap bisa mengisi lalu menekan Kirim: data disimpan di HP dan dikirim otomatis nanti.</div>
+        </div>
+      )}
+      {photoErr && (
+        <div className="banner banner--warn" role="alert">
+          <Icon name="camera" size={18} />
+          <div className="grow">{photoErr}</div>
+          <button type="button" className="btn btn--sm btn--ghost" onClick={() => setPhotoErr(null)}>
+            Tutup
+          </button>
         </div>
       )}
       {submitErr && (
@@ -544,9 +648,15 @@ function P2HFormBody({
                   item={it}
                   value={st.answers[it.id]?.c ?? null}
                   note={st.answers[it.id]?.note ?? ''}
+                  photos={st.answers[it.id]?.photos ?? NO_PHOTOS}
+                  keep={st.answers[it.id]?.keep ?? NO_KEEP}
+                  photoBusy={photoBusy === it.id}
                   invalid={errors.some((e) => e.key === `item-${it.id}`)}
                   onChange={setAnswer}
                   onNote={setNote}
+                  onAddPhotos={addPhotos}
+                  onRemovePhoto={removePhoto}
+                  onRemoveKept={removeKept}
                 />
               ))}
             </ol>
@@ -609,7 +719,7 @@ function P2HFormBody({
 
       {/* ---------- 6. tanda tangan ---------- */}
       <section className="fcard" data-key="sig">
-        <SectionTitle hint="Tanda tangan Mekanik / Electrician">6 · Tanda tangan</SectionTitle>
+        <SectionTitle hint="Tanda tangan teknisi. Berstatus Terverifikasi setelah pengawas memeriksa dan menandatangani.">6 · Tanda tangan</SectionTitle>
         {user?.signature_png && (
           <Segmented
             label="Sumber tanda tangan"
@@ -678,12 +788,18 @@ interface RowProps {
   item: ChecklistItem;
   value: Condition | null;
   note: string;
+  photos: string[];
+  keep: number[];
+  photoBusy: boolean;
   invalid: boolean;
   onChange: (id: number, c: Condition) => void;
   onNote: (id: number, note: string) => void;
+  onAddPhotos: (id: number, files: File[]) => void;
+  onRemovePhoto: (id: number, index: number) => void;
+  onRemoveKept: (id: number, photoId: number) => void;
 }
 
-const CheckRow = memo(function CheckRow({ item, value, note, invalid, onChange, onNote }: RowProps) {
+const CheckRow = memo(function CheckRow({ item, value, note, photos, keep, photoBusy, invalid, onChange, onNote, onAddPhotos, onRemovePhoto, onRemoveKept }: RowProps) {
   const bad = value === 'rusak' || value === 'perbaiki';
   return (
     <li className={`crow ${bad ? 'crow--bad' : ''} ${value === 'baik' ? 'crow--ok' : ''} ${invalid ? 'crow--invalid' : ''}`} data-key={`item-${item.id}`}>
@@ -726,6 +842,17 @@ const CheckRow = memo(function CheckRow({ item, value, note, invalid, onChange, 
             onChange={(e) => onNote(item.id, e.target.value)}
             placeholder="Apa yang rusak / perlu diperbaiki? (wajib diisi)"
             aria-invalid={invalid && note.trim().length < 3}
+          />
+          <PhotoPicker
+            photos={photos}
+            kept={keep}
+            max={MAX_PHOTOS}
+            busy={photoBusy}
+            invalid={invalid && photos.length + keep.length === 0}
+            label={`butir ${item.no}`}
+            onAdd={(files) => onAddPhotos(item.id, files)}
+            onRemoveNew={(i) => onRemovePhoto(item.id, i)}
+            onRemoveKept={(pid) => onRemoveKept(item.id, pid)}
           />
         </div>
       )}
@@ -784,16 +911,18 @@ function UnitPicker({
   }
   return (
     <div className="upick">
-      <div className="chips" role="tablist" aria-label="Pilih site">
-        <button type="button" role="tab" aria-selected={site === null} className={`fchip ${site === null ? 'is-on' : ''}`} onClick={() => setSite(null)}>
-          Semua
-        </button>
-        {sites.map((s) => (
-          <button key={s.id} type="button" role="tab" aria-selected={site === s.id} className={`fchip ${site === s.id ? 'is-on' : ''}`} onClick={() => setSite(s.id)}>
-            {s.name}
+      {sites.length > 1 && (
+        <div className="chips" role="tablist" aria-label="Pilih site">
+          <button type="button" role="tab" aria-selected={site === null} className={`fchip ${site === null ? 'is-on' : ''}`} onClick={() => setSite(null)}>
+            Semua
           </button>
-        ))}
-      </div>
+          {sites.map((s) => (
+            <button key={s.id} type="button" role="tab" aria-selected={site === s.id} className={`fchip ${site === s.id ? 'is-on' : ''}`} onClick={() => setSite(s.id)}>
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
       <label className="searchbox">
         <Icon name="search" size={18} />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cari kode, merek, lokasi…" aria-label="Cari unit" />
@@ -911,7 +1040,7 @@ function DoneScreen({
 function fromDetail(meta: Meta, d: FormDetail): FormState {
   const base = blankState(meta, d.form.unit_id);
   const answers: FormState['answers'] = {};
-  for (const s of d.sections) for (const it of s.items) if (it.item_id != null) answers[it.item_id] = { c: it.condition, note: it.note ?? '' };
+  for (const s of d.sections) for (const it of s.items) if (it.item_id != null) answers[it.item_id] = { c: it.condition, note: it.note ?? '', photos: [], keep: (it.photos ?? []).map((p) => p.id) };
   const params: FormState['params'] = { ...base.params };
   for (const p of d.params) params[p.key] = { idle: p.idle != null ? num(p.idle) : '', load: p.load != null ? num(p.load) : '' };
   return {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
+import { PhotoStrip } from '../components/Photos';
 import { DangerCode, Empty, ErrorBox, PageHead, Spinner } from '../components/ui';
 import { CAN_FIX, useAuth } from '../lib/auth';
 import { CONDITION_LABEL, FIX_LABEL, ago, dateTime, mediumDate, modelOf, plain, shiftLabel, span } from '../lib/format';
@@ -50,6 +51,7 @@ export default function FindingsPage() {
     fix_by_name: null,
     fix_at: null,
     due_at: f.due_at,
+    photos: [],
   });
 
   return (
@@ -65,16 +67,18 @@ export default function FindingsPage() {
         </button>
       </div>
 
-      <div className="chips" role="tablist" aria-label="Site">
-        <button type="button" role="tab" aria-selected={site === null} className={`fchip ${site === null ? 'is-on' : ''}`} onClick={() => setSite(null)}>
-          Semua site
-        </button>
-        {meta.data?.sites.map((s) => (
-          <button key={s.id} type="button" role="tab" aria-selected={site === s.id} className={`fchip ${site === s.id ? 'is-on' : ''}`} onClick={() => setSite(s.id)}>
-            {s.name}
+      {(meta.data?.sites.length ?? 0) > 1 && (
+        <div className="chips" role="tablist" aria-label="Site">
+          <button type="button" role="tab" aria-selected={site === null} className={`fchip ${site === null ? 'is-on' : ''}`} onClick={() => setSite(null)}>
+            Semua site
           </button>
-        ))}
-      </div>
+          {meta.data?.sites.map((s) => (
+            <button key={s.id} type="button" role="tab" aria-selected={site === s.id} className={`fchip ${site === s.id ? 'is-on' : ''}`} onClick={() => setSite(s.id)}>
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {q.isLoading && <Spinner />}
       {q.error && !q.data && <ErrorBox error={q.error} onRetry={() => void q.refetch()} />}
@@ -125,6 +129,7 @@ export default function FindingsPage() {
                   <span className="fcard2__cond"> — {CONDITION_LABEL[f.condition]}</span>
                 </h3>
                 {f.note && <p className="fcard2__note">“{f.note}”</p>}
+                {f.photo_ids && f.photo_ids.length > 0 && <PhotoStrip items={f.photo_ids.slice(0, 6)} label={plain(f.item_text)} />}
 
                 <div className="fcard2__meta small muted">
                   {f.status === 'closed' ? (

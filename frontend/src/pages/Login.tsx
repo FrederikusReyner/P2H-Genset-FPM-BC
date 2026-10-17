@@ -74,7 +74,7 @@ export default function LoginPage() {
         <form className="login__form" onSubmit={submit} noValidate>
           <div className="eyebrow">Masuk</div>
           <h2 className="login__h">Selamat datang</h2>
-          <p className="muted">Pakai ID karyawan dan password dari admin site.</p>
+          <p className="muted">Pakai No SID dan password dari admin.</p>
 
           {err && (
             <div className="banner banner--stop" role="alert">
@@ -83,7 +83,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <Field label="ID karyawan" htmlFor="nrp">
+          <Field label="No SID" htmlFor="nrp">
             <input
               id="nrp"
               className="input"

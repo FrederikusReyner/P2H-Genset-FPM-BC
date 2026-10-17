@@ -3,7 +3,7 @@ import {
   TableLayoutType, TableRow, TextRun, VerticalAlign, WidthType,
 } from 'docx';
 import { plain, segments } from '../../text.js';
-import { FORM_REV, PENTING, TITLE, formExportData } from './common.js';
+import { FORM_REV, PENTING, TITLE, fitSize, formExportData } from './common.js';
 
 const FONT = 'Calibri';
 const RED = 'B3261E';
@@ -62,7 +62,7 @@ export async function buildFormDocx(id) {
   const kids = [];
 
   /* ---------- kepala ---------- */
-  const mtl = img(data.logos.mtl, 78, 42);
+  const mtl = img(data.logos.mtl, 68, 42); // logo MTL 249 x 155 px: jaga perbandingan supaya tidak gepeng / terpotong
   const berau = img(data.logos.berau, 52, 44);
   const chip =
     data.result === 'stop_aa' ? { t: 'HASIL: STOP OPERASI (AA)', c: RED } : data.result === 'temuan_a' ? { t: 'HASIL: ADA TEMUAN (A)', c: AMBER } : { t: 'HASIL: SEMUA BAIK', c: GREEN };
@@ -80,6 +80,7 @@ export async function buildFormDocx(id) {
               [
                 para(run(TITLE, { size: 28, bold: true }), { align: AlignmentType.CENTER }),
                 para(run(chip.t, { size: 16, bold: true, color: chip.c }), { align: AlignmentType.CENTER, before: 40 }),
+                para(run(`STATUS: ${data.verify_text}`, { size: 13, bold: true, color: data.verified ? GREEN : '777777' }), { align: AlignmentType.CENTER, before: 10 }),
               ],
               { width: TOTAL - 3400, borders: { top: none, bottom: none, left: none, right: none } },
             ),
@@ -159,7 +160,7 @@ export async function buildFormDocx(id) {
           cell(run(''), { width: W.no, fill: S }),
           cell(run(s.title, { size: 15, bold: true }), { width: W.uraian + W.kode + W.baik + W.rusak + W.perbaiki + W.catatan, span: 6, fill: S }),
         ],
-        230,
+        210,
       ),
     );
     for (const it of s.items) {
@@ -177,7 +178,7 @@ export async function buildFormDocx(id) {
             cell(it.condition === 'perbaiki' ? tick(AMBER) : run(''), { width: W.perbaiki, align: AlignmentType.CENTER, fill }),
             cell(run(note, { size: 13, italics: !it.note, color: it.note ? undefined : '666666' }), { width: W.catatan, fill }),
           ],
-          230,
+          210,
         ),
       );
     }
@@ -194,7 +195,7 @@ export async function buildFormDocx(id) {
         cell(para(run('Berbeban', { size: 14, bold: true }), { align: AlignmentType.CENTER }), { width: W.rusak + W.perbaiki, span: 2, fill: S }),
         cell(run(''), { width: W.catatan, fill: S }),
       ],
-      230,
+      210,
     ),
     ...data.params.map((p, i) =>
       rowOf(
@@ -205,7 +206,7 @@ export async function buildFormDocx(id) {
           cell(para([run(p.load, { size: 16, bold: true }), run(p.load ? `  ${p.unit}` : p.unit, { size: 12, color: '555555' })], { align: AlignmentType.RIGHT }), { width: W.rusak + W.perbaiki, span: 2 }),
           cell(run(''), { width: W.catatan }),
         ],
-        230,
+        210,
       ),
     ),
   ];
@@ -230,14 +231,18 @@ export async function buildFormDocx(id) {
 
   /* ---------- tanda tangan + info tambahan ---------- */
   const sw = [2400, 2400, TOTAL - 4800];
-  const signCell = (title, sign, roleLabel, width) =>
+  const signCell = (title, sign, width, pending) =>
     cell(
       [
-        para(run('Tanda Tangan', { size: 14, italics: true })),
-        para(run(title, { size: 14, italics: true })),
-        sign?.img ? para(img(sign.img, 104, 40), { align: AlignmentType.CENTER, before: 30 }) : para(run(''), { before: 420 }),
+        para(run(`Tanda Tangan · ${title}`, { size: 14, italics: true })),
+        sign?.img
+          ? para(img(sign.img, 96, 36), { align: AlignmentType.CENTER, before: 10 })
+          : para(run(pending || '', { size: 13, bold: true, color: '8A8A80' }), { align: AlignmentType.CENTER, before: 130, after: 110 }),
         para(run(sign?.name ? `( ${sign.name} )` : '(                                      )', { size: 15, bold: true }), { align: AlignmentType.CENTER }),
-        para(run(roleLabel, { size: 13, italics: true }), { align: AlignmentType.CENTER }),
+        ...(sign?.nrp || sign?.company
+          ? [para(run([sign.nrp ? `SID ${sign.nrp}` : '', sign.company].filter(Boolean).join(' · '), { size: 11, italics: true, color: '444444' }), { align: AlignmentType.CENTER })]
+          : []),
+        ...(sign?.verified ? [para(run(`TERVERIFIKASI ${sign.at}`, { size: 11, bold: true, color: GREEN }), { align: AlignmentType.CENTER })] : []),
       ],
       { width, v: VerticalAlign.TOP },
     );
@@ -258,8 +263,8 @@ export async function buildFormDocx(id) {
         new TableRow({
           cantSplit: true,
           children: [
-            signCell('Mekanik/Electrician', data.sign_mek, 'Mekanik/Electrician', sw[0]),
-            signCell('Foreman / Spv', data.sign_sup, 'Pengawas/PJA', sw[1]),
+            signCell('Teknisi', data.sign_mek, sw[0]),
+            signCell('Pengawas', data.sign_sup, sw[1], 'MENUNGGU VERIFIKASI'),
             cell(info, { width: sw[2], v: VerticalAlign.TOP }),
           ],
         }),
@@ -275,6 +280,42 @@ export async function buildFormDocx(id) {
       { before: 20 },
     ),
   );
+
+  /* ---------- lampiran foto temuan (hanya bila ada foto) ---------- */
+  const withPhotos = data.findings.filter((x) => x.images.length);
+  if (withPhotos.length) {
+    kids.push(
+      new Paragraph({ children: [run('LAMPIRAN FOTO TEMUAN', { size: 26, bold: true })], pageBreakBefore: true }),
+      para(run(`${data.header.no_unit} · ${data.header.hari_tgl} · Shift ${data.header.shift} · ${data.header.site}`, { size: 16, color: '444444' }), { after: 80 }),
+    );
+    const colW = Math.floor(TOTAL / 3);
+    const light = { style: BorderStyle.SINGLE, size: 4, color: 'C9CDBF' };
+    const lb = { top: light, bottom: light, left: light, right: light };
+    for (const fd of withPhotos) {
+      kids.push(
+        para(run(`[${fd.code}] ${fd.text} — ${fd.condition}${fd.note ? ': ' + fd.note : ''}`, { size: 16, bold: true, color: fd.code === 'AA' ? RED : undefined }), { before: 140, after: 50 }),
+      );
+      const trs = [];
+      for (let i = 0; i < fd.images.length; i += 3) {
+        const chunk = fd.images.slice(i, i + 3);
+        trs.push(
+          new TableRow({
+            cantSplit: true,
+            children: [0, 1, 2].map((k) => {
+              const im = chunk[k];
+              const sz = im ? fitSize(im.buffer, 215, 165) : null;
+              return cell(im ? para(new ImageRun({ type: im.mime === 'image/png' ? 'png' : 'jpg', data: im.buffer, transformation: sz }), { align: AlignmentType.CENTER }) : para(run('')), {
+                width: colW,
+                borders: im ? lb : { top: none, bottom: none, left: none, right: none },
+                margins: { top: 40, bottom: 40, left: 40, right: 40 },
+              });
+            }),
+          }),
+        );
+      }
+      kids.push(new Table({ width: { size: colW * 3, type: WidthType.DXA }, columnWidths: [colW, colW, colW], layout: TableLayoutType.FIXED, rows: trs }));
+    }
+  }
 
   const doc = new Document({
     creator: 'P2H Genset',

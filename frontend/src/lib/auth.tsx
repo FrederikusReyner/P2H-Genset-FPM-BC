@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiError, api, getToken, setToken, setUnauthorizedHandler } from './api';
 import { clearSnapshots, safeDel, safeGet, safeSet } from './cache';
+import { clearPhotoCache } from './photos';
 import type { Role, User } from './types';
 
 interface AuthCtx {
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     safeDel(USER_KEY);
     clearSnapshots();
+    clearPhotoCache();
     setUserState(null);
     setOffline(false);
     qc.clear();
@@ -114,6 +116,9 @@ export function useAuth(): AuthCtx {
   return c;
 }
 
-export const CAN_FILL: Role[] = ['mekanik', 'pengawas', 'admin'];
-export const CAN_SIGN: Role[] = ['pengawas', 'admin'];
-export const CAN_FIX: Role[] = ['mekanik', 'pengawas', 'admin'];
+export const CAN_FILL: Role[] = ['teknisi', 'admin']; // mengisi P2H
+export const CAN_SIGN: Role[] = ['pengawas', 'admin']; // memverifikasi (tanda tangan pengawas)
+export const CAN_FIX: Role[] = ['teknisi', 'pengawas', 'admin']; // tindak lanjut temuan
+
+/** Teknisi dan pengawas hanya melihat site-nya sendiri; admin melihat semua site. */
+export const seesAllSites = (u: { role: Role } | null | undefined) => u?.role === 'admin';

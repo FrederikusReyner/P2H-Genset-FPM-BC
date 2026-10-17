@@ -28,7 +28,7 @@ export default function HistoryPage() {
     result: sp.get('hasil') || '',
     q: sp.get('q') || '',
     mine: sp.get('saya') === '1',
-    unsigned: sp.get('belumttd') === '1',
+    unverified: sp.get('belumverifikasi') === '1',
     offset: Number(sp.get('hal') || 0),
   };
 
@@ -58,7 +58,7 @@ export default function HistoryPage() {
       if (f.shift) filters.shift = f.shift;
       if (f.result) filters.result = f.result;
       if (f.q) filters.q = f.q;
-      if (f.unsigned) filters.unsigned = 1;
+      if (f.unverified) filters.unverified = 1;
       await downloadFile({ kind: 'rekap', format, filters });
     } catch (e) {
       toast.push({ title: 'Gagal menyiapkan unduhan', body: e instanceof Error ? e.message : undefined, tone: 'danger' });
@@ -70,6 +70,9 @@ export default function HistoryPage() {
   return (
     <div className="page">
       <PageHead eyebrow="Arsip" title="Riwayat P2H">
+        <Link to="/rekap" className="btn btn--ghost">
+          <Icon name="chart" size={18} /> Rekap mingguan / bulanan / tahunan
+        </Link>
         <DownloadMenu onPick={download} label="Unduh rekap" busy={dl} disabled={!items.length} />
       </PageHead>
 
@@ -92,8 +95,8 @@ export default function HistoryPage() {
             </label>
           )}
           <label className="check check--chip">
-            <input type="checkbox" checked={f.unsigned} onChange={(e) => set({ belumttd: e.target.checked ? '1' : null })} />
-            <span>Belum ditandatangani</span>
+            <input type="checkbox" checked={f.unverified} onChange={(e) => set({ belumverifikasi: e.target.checked ? '1' : null })} />
+            <span>Menunggu verifikasi</span>
           </label>
         </div>
         <div className="filters__grid">
@@ -105,17 +108,19 @@ export default function HistoryPage() {
             <span className="field__label">Sampai tanggal</span>
             <input className="input" type="date" value={f.to} min={f.from} max={today} onChange={(e) => e.target.value && set({ sampai: e.target.value })} />
           </label>
-          <label className="field">
-            <span className="field__label">Site</span>
-            <select className="input" value={f.site_id ?? ''} onChange={(e) => set({ site: e.target.value || null, unit: null })}>
-              <option value="">Semua site</option>
-              {meta.data?.sites.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          {(meta.data?.sites.length ?? 0) > 1 && (
+            <label className="field">
+              <span className="field__label">Site</span>
+              <select className="input" value={f.site_id ?? ''} onChange={(e) => set({ site: e.target.value || null, unit: null })}>
+                <option value="">Semua site</option>
+                {meta.data?.sites.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="field">
             <span className="field__label">Unit</span>
             <select className="input" value={f.unit_id ?? ''} onChange={(e) => set({ unit: e.target.value || null })}>
@@ -147,7 +152,7 @@ export default function HistoryPage() {
         </div>
         <label className="searchbox">
           <Icon name="search" size={18} />
-          <input value={f.q} onChange={(e) => set({ q: e.target.value || null })} placeholder="Cari kode unit atau nama mekanik…" aria-label="Cari" />
+          <input value={f.q} onChange={(e) => set({ q: e.target.value || null })} placeholder="Cari kode unit atau nama teknisi…" aria-label="Cari" />
         </label>
       </section>
 
@@ -172,10 +177,10 @@ export default function HistoryPage() {
                   <th>Tanggal</th>
                   <th>Unit</th>
                   <th>Site</th>
-                  <th>Mekanik / Electrician</th>
+                  <th>Teknisi</th>
                   <th className="num">HM awal → akhir</th>
                   <th>Hasil</th>
-                  <th>Pengawas</th>
+                  <th>Verifikasi</th>
                   <th />
                 </tr>
               </thead>
@@ -203,12 +208,12 @@ export default function HistoryPage() {
                       <ResultChip result={r.result} />
                     </td>
                     <td>
-                      {r.signed ? (
-                        <span className="small" title={dateTime(r.sup_signed_at)}>
-                          <Icon name="check" size={14} stroke={2.6} /> {r.sup_name}
+                      {r.verified ? (
+                        <span className="small" title={`${r.sup_name} · ${dateTime(r.sup_signed_at)}`}>
+                          <Icon name="verified" size={14} stroke={2.4} /> Terverifikasi
                         </span>
                       ) : (
-                        <span className="small muted">belum</span>
+                        <span className="small muted">Menunggu</span>
                       )}
                     </td>
                     <td>
@@ -237,8 +242,9 @@ export default function HistoryPage() {
                   <div className="small muted">
                     {r.inspector_name} · {timeOf(r.filled_at)}
                     {r.n_aa + r.n_a > 0 ? ` · ${r.n_aa ? r.n_aa + ' AA ' : ''}${r.n_a ? r.n_a + ' A' : ''}` : ''}
+                    {r.n_photos > 0 ? ` · ${r.n_photos} foto` : ''}
                   </div>
-                  <div className="small hcard__sign">{r.signed ? <><Icon name="check" size={14} stroke={2.6} /> TTD {r.sup_name}</> : <span className="muted">Belum ditandatangani pengawas</span>}</div>
+                  <div className="small hcard__sign">{r.verified ? <><Icon name="verified" size={14} stroke={2.4} /> Terverifikasi · {r.sup_name}</> : <span className="muted">Menunggu verifikasi pengawas</span>}</div>
                 </Link>
               </li>
             ))}

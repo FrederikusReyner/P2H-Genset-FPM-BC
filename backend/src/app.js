@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
@@ -14,6 +16,7 @@ import exportRoutes from './routes/exports.js';
 import findingsRoutes from './routes/findings.js';
 import metaRoutes from './routes/meta.js';
 import notificationRoutes from './routes/notifications.js';
+import photoRoutes from './routes/photos.js';
 import p2hRoutes from './routes/p2h.js';
 import unitRoutes from './routes/units.js';
 import userRoutes from './routes/users.js';
@@ -23,7 +26,29 @@ export function createApp() {
   app.set('trust proxy', 1); // Render berada di belakang proxy
   app.disable('x-powered-by');
 
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  // aturan keamanan halaman web (dipakai bila server ini ikut menyajikan aplikasinya)
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          fontSrc: ["'self'", 'data:'],
+          connectSrc: ["'self'"],
+          manifestSrc: ["'self'"],
+          workerSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          frameAncestors: ["'none'"],
+        },
+      },
+    }),
+  );
   app.use(compression());
 
   const localhost = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
@@ -41,6 +66,9 @@ export function createApp() {
     }),
   );
 
+  // P2H membawa foto temuan: batasnya lebih besar, tapi hanya untuk yang sudah membawa tanda masuk
+  const bigJson = express.json({ limit: '16mb' });
+  app.use('/api/p2h', (req, res, next) => (req.headers.authorization ? bigJson(req, res, next) : next()));
   app.use(express.json({ limit: '1mb' }));
 
   // batas umum: 900 permintaan per menit per alamat IP (cukup longgar untuk banyak HP di satu jaringan site)
@@ -89,15 +117,41 @@ export function createApp() {
   app.use('/api/users', userRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationRoutes);
+  app.use('/api/photos', photoRoutes);
   app.use('/api/exports', exportRoutes);
-
-  app.get('/', (_req, res) => {
-    res.type('text/plain').send('P2H Genset API berjalan. Buka aplikasi web untuk memakainya.');
-  });
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: { code: 'not_found', message: 'Alamat tidak dikenal.' } });
   });
+
+  // ---- tampilan web (hasil build frontend) ----
+  const indexHtml = path.join(config.webDir, 'index.html');
+  if (fs.existsSync(indexHtml)) {
+    app.use(
+      express.static(config.webDir, {
+        index: false,
+        redirect: false,
+        setHeaders(res, file) {
+          const base = path.basename(file);
+          if (['sw.js', 'index.html', 'manifest.webmanifest', 'registerSW.js'].includes(base)) res.setHeader('Cache-Control', 'no-cache');
+          else if (file.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          else res.setHeader('Cache-Control', 'public, max-age=86400');
+          if (base === 'sw.js') res.setHeader('Service-Worker-Allowed', '/');
+        },
+      }),
+    );
+    // alamat halaman aplikasi (mis. /p2h/12) -> index.html
+    app.use((req, res, next) => {
+      if ((req.method !== 'GET' && req.method !== 'HEAD') || req.path.startsWith('/api')) return next();
+      res.setHeader('Cache-Control', 'no-cache');
+      return res.sendFile(indexHtml);
+    });
+    console.log(`[web] menyajikan tampilan aplikasi dari ${config.webDir}`);
+  } else {
+    app.get('/', (_req, res) => {
+      res.type('text/plain').send('P2H Genset API berjalan. Buka aplikasi web untuk memakainya.');
+    });
+  }
 
   // ---- penanganan error (semua jadi JSON yang rapi) ----
   // eslint-disable-next-line no-unused-vars

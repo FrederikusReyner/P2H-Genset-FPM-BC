@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs';
 import { plain, segments } from '../../text.js';
-import { FORM_REV, PENTING, TITLE, formExportData } from './common.js';
+import { FORM_REV, PENTING, TITLE, formExportData, fitSize } from './common.js';
 
 const RED = 'FFB3261E';
 const AMBER = 'FF9A6700';
@@ -46,9 +46,13 @@ export async function buildFormXlsx(id) {
   ws.getCell('B2').value = chip[0];
   ws.getCell('B2').font = font({ size: 10, bold: true, color: { argb: chip[1] } });
   ws.getCell('B2').alignment = { horizontal: 'center' };
+  ws.mergeCells('B3:F3');
+  ws.getCell('B3').value = `STATUS: ${data.verify_text}`;
+  ws.getCell('B3').font = font({ size: 9, bold: true, color: { argb: data.verified ? GREEN : 'FF777777' } });
+  ws.getCell('B3').alignment = { horizontal: 'center' };
   if (data.logos.mtl) {
     const id1 = wb.addImage({ buffer: data.logos.mtl, extension: 'png' });
-    ws.addImage(id1, { tl: { col: 0.15, row: 0.15 }, ext: { width: 84, height: 45 } });
+    ws.addImage(id1, { tl: { col: 0.15, row: 0.15 }, ext: { width: 72, height: 45 } });
   }
   if (data.logos.berau) {
     const id2 = wb.addImage({ buffer: data.logos.berau, extension: 'png' });
@@ -193,17 +197,19 @@ export async function buildFormXlsx(id) {
 
   /* ---------- tanda tangan + info ---------- */
   const top = r;
-  const SH = 6;
+  const SH = 7;
   ws.mergeCells(`A${top}:B${top + SH - 1}`);
   ws.mergeCells(`C${top}:F${top + SH - 1}`);
   ws.mergeCells(`G${top}:G${top + SH - 1}`);
   const lab = (addr, t, sign, role) => {
     const c = ws.getCell(addr);
-    c.value = { richText: [{ text: `Tanda Tangan\n${t}`, font: font({ italic: true, size: 8 }) }, { text: `\n\n\n\n( ${sign?.name || '                              '} )\n`, font: font({ bold: true, size: 9 }) }, { text: role, font: font({ italic: true, size: 8 }) }] };
+    const extra = [sign?.nrp ? `SID ${sign.nrp}` : '', sign?.company || ''].filter(Boolean).join(' · ');
+    const stat = sign?.verified ? `\nTERVERIFIKASI ${sign.at}` : sign ? '' : '\nMENUNGGU VERIFIKASI';
+    c.value = { richText: [{ text: `Tanda Tangan\n${t}`, font: font({ italic: true, size: 8 }) }, { text: `\n\n\n\n( ${sign?.name || '                              '} )\n`, font: font({ bold: true, size: 9 }) }, { text: `${role}${extra ? `\n${extra}` : ''}`, font: font({ italic: true, size: 8 }) }, { text: stat, font: font({ bold: true, size: 7, color: { argb: sign?.verified ? GREEN : 'FF8A8A80' } }) }] };
     c.alignment = { vertical: 'top', horizontal: 'center', wrapText: true };
   };
-  lab(`A${top}`, 'Mekanik/Electrician', data.sign_mek, 'Mekanik/Electrician');
-  lab(`C${top}`, 'Foreman / Spv', data.sign_sup, 'Pengawas/PJA');
+  lab(`A${top}`, 'Teknisi (Mekanik / Electrician)', data.sign_mek, 'Teknisi');
+  lab(`C${top}`, 'Pengawas (Foreman / Spv)', data.sign_sup, 'Pengawas');
   const info = [data.notes, ...data.findings.map((fd) => `• [${fd.code}] ${fd.text} — ${fd.condition}${fd.note ? ': ' + fd.note : ''} (${fd.status}${fd.fix_note ? ': ' + fd.fix_note : ''})`)].filter(Boolean).join('\n');
   const gc = ws.getCell(`G${top}`);
   gc.value = { richText: [{ text: 'INFO TAMBAHAN dan TINDAK LANJUT :\n', font: font({ bold: true, size: 8 }) }, { text: info, font: font({ size: 8 }) }] };
@@ -228,6 +234,36 @@ export async function buildFormXlsx(id) {
   ws.getCell(`A${r}`).value = `${FORM_REV}  ·  P2H #${f.id} · ${data.header.no_unit} · Shift ${data.header.shift} · ${data.long_date}  ·  Dikirim ${data.stamp}  ·  dibuat oleh aplikasi P2H Genset`;
   ws.getCell(`A${r}`).font = font({ size: 7, color: { argb: 'FF777777' } });
   ws.pageSetup.printArea = `A1:G${r}`;
+
+  /* ---------- lembar foto temuan (hanya bila ada foto) ---------- */
+  const withPhotos = data.findings.filter((x) => x.images.length);
+  if (withPhotos.length) {
+    const wp = wb.addWorksheet('Foto Temuan', { views: [{ showGridLines: false }] });
+    wp.columns = [{ width: 3 }, { width: 38 }, { width: 38 }, { width: 38 }];
+    wp.pageSetup = { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 } };
+    wp.getCell('B1').value = `LAMPIRAN FOTO TEMUAN — ${data.header.no_unit} · ${data.header.hari_tgl} · Shift ${data.header.shift}`;
+    wp.getCell('B1').font = font({ bold: true, size: 12 });
+    let pr = 3;
+    for (const fd of withPhotos) {
+      wp.mergeCells(`B${pr}:D${pr}`);
+      const hc = wp.getCell(`B${pr}`);
+      hc.value = `[${fd.code}] ${fd.text} — ${fd.condition}${fd.note ? ': ' + fd.note : ''}`;
+      hc.font = font({ bold: true, size: 10, color: { argb: fd.code === 'AA' ? RED : 'FF111111' } });
+      hc.alignment = { wrapText: true, vertical: 'middle' };
+      wp.getRow(pr).height = 28;
+      pr += 1;
+      for (let i = 0; i < fd.images.length; i += 3) {
+        wp.getRow(pr).height = 128;
+        fd.images.slice(i, i + 3).forEach((im, k) => {
+          const sz = fitSize(im.buffer, 240, 165);
+          const id = wb.addImage({ buffer: im.buffer, extension: im.mime === 'image/png' ? 'png' : 'jpeg' });
+          wp.addImage(id, { tl: { col: 1 + k + 0.03, row: pr - 1 + 0.04 }, ext: { width: sz.width, height: sz.height } });
+        });
+        pr += 1;
+      }
+      pr += 1;
+    }
+  }
 
   const buffer = Buffer.from(await wb.xlsx.writeBuffer());
   return { buffer, filename: `${data.filename}.xlsx` };
