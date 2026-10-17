@@ -1,0 +1,37 @@
+{
+  "name": "p2h-genset-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Server (API) aplikasi P2H Genset - Berau Coal / MTL",
+  "type": "module",
+  "engines": {
+    "node": ">=20.12.0 <25"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "dev:db": "node scripts/dev-db.js",
+    "migrate": "node src/migrate.js",
+    "keys": "node scripts/gen-keys.js",
+    "demo": "node scripts/demo-data.js",
+    "test": "node --test tests/api.test.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "docx": "^9.5.0",
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pdfkit": "^0.17.0",
+    "pg": "^8.16.0",
+    "web-push": "^3.6.7",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "embedded-postgres": "17.10.0-beta.17"
+  }
+}

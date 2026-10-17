@@ -1,0 +1,59 @@
+{
+  "_catatan": "Daftar cek disalin dari FORM INSPEKSI HARIAN GENSET (Update Form Agustus 2026). Tanda ** di teks = dicetak tebal di form kertas. Kode bahaya: AA = STOP OPERASI, A = perbaiki dalam 1 x 12 jam.",
+  "sections": [
+    {
+      "code": "engine",
+      "title": "ENGINE",
+      "items": [
+        { "text": "Periksa fungsi dan kondisi engine", "danger_code": "AA" },
+        { "text": "Periksa level oli, **tambah bila kurang**", "danger_code": "AA" },
+        { "text": "Periksa **Fuel System** dan **sambungan** dari buntu atau bocor", "danger_code": "AA", "hint": "Sesuaikan dengan type engine" },
+        { "text": "Periksa, tambah atau ganti air radiator", "danger_code": "AA" },
+        { "text": "Periksa kebocoran air radiator", "danger_code": "AA" },
+        { "text": "Periksa sirip-sirip radiator dari kerusakan", "danger_code": "A" },
+        { "text": "Periksa kondisi dan fungsi V-belt, **ganti jika rusak**", "danger_code": "AA" },
+        { "text": "Periksa dan bersihkan air cleaner, **ganti jika rusak**", "danger_code": "AA" },
+        { "text": "Periksa kondisi mufler", "danger_code": "AA" },
+        { "text": "Periksa keausan mounting engine dan dinamo", "danger_code": "A" },
+        { "text": "Check kekencangan torsi setiap baut dan mounting baut", "danger_code": "A" }
+      ]
+    },
+    {
+      "code": "elektrik",
+      "title": "ELEKTRIK SYSTEM",
+      "items": [
+        { "text": "Periksa terminal battery, elektrolit dan ganti bila rusak", "danger_code": "A" },
+        { "text": "Periksa kabel grounding", "danger_code": "A" },
+        { "text": "Periksa starting motor dan alternator", "danger_code": "A" },
+        { "text": "Periksa semua sambungan kabel dan kondisinya", "danger_code": "A" },
+        { "text": "Periksa semua lampu peringatan & alarm", "danger_code": "A" },
+        { "text": "Check monitor panel, kunci kontak, gauge dan fungsinya", "danger_code": "A" },
+        { "text": "Periksa kabel harness", "danger_code": "A" },
+        { "text": "Periksa Sekring & pemutus arus/Circuit breaker", "danger_code": "A" },
+        { "text": "Periksa main switch", "danger_code": "A" },
+        { "text": "Periksa penerangan di ruang genset & penerangan darurat jika ada", "danger_code": "A" }
+      ]
+    },
+    {
+      "code": "tambahan",
+      "title": "TAMBAHAN ITEM YANG HARUS DIPERIKSA",
+      "items": [
+        { "text": "Periksa kebersihan unit", "danger_code": "A" },
+        { "text": "Periksa kondisi kerangka unit", "danger_code": "A" },
+        { "text": "Periksa kondisi box panel", "danger_code": "A" },
+        { "text": "Periksa isolator kabel di box panel", "danger_code": "A" },
+        { "text": "Periksa kondisi dan gauge Apar", "danger_code": "A" },
+        { "text": "Periksa kebocoran dan keretakan fuel tank dan sub tank", "danger_code": "A" },
+        { "text": "Periksa pengaman/guarding fan radiator", "danger_code": "A" }
+      ]
+    },
+    {
+      "code": "housekeeping",
+      "title": "HOUSE KEEPING",
+      "items": [
+        { "text": "Periksa kebersihan ruang genset", "danger_code": "A" },
+        { "text": "Periksa kebersihan oil trap", "danger_code": "A" }
+      ]
+    }
+  ]
+}

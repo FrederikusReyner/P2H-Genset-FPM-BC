@@ -1,0 +1,106 @@
+/* =====================================================================
+   P2H Genset - warna & ukuran dasar
+   Warna merek diambil dari logo Berau Coal: hijau #4FB127 + hitam.
+   Warna status (baik / temuan / STOP) sudah dicek kontrasnya.
+   ===================================================================== */
+:root {
+  color-scheme: light;
+
+  --font-ui: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-cond: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* bingkai hitam (header, menu bawah) */
+  --frame: #10130d;
+  --frame-2: #1a1f14;
+  --frame-line: #2b3122;
+  --on-frame: #f0f2e8;
+  --on-frame-2: #a9b09c;
+
+  /* lembar kerja */
+  --paper: #f2f3ec;
+  --surface: #ffffff;
+  --surface-2: #f7f8f2;
+  --ink: #10130d;
+  --ink-2: #454b3d;
+  --muted: #666c5c;
+  --line: #dadcd0;
+  --line-2: #c4c8b8;
+
+  /* hijau Berau */
+  --brand: #4fb127;
+  --brand-deep: #2e7d17;
+  --brand-tint: #e7f4dd;
+  --on-brand: #10130d;
+
+  /* status */
+  --ok: #3a9a22;
+  --ok-bg: #e4f3da;
+  --ok-ink: #25690f;
+  --warn: #f7b928;
+  --warn-bg: #fff1cc;
+  --warn-ink: #7a5200;
+  --stop: #c62f2f;
+  --stop-bg: #fbe3e0;
+  --stop-ink: #9e1f1f;
+  --on-stop: #ffffff;
+  --idle: #9aa08d;
+  --info: #2457a6;
+  --info-bg: #e3ecf9;
+  --info-ink: #1f4a8f;
+
+  --r: 4px;
+  --r-sm: 2px;
+  --r-lg: 8px;
+  --gutter: 16px;
+  --shadow-pop: 0 12px 34px rgba(10, 14, 6, 0.2);
+  --focus: 0 0 0 3px rgba(79, 177, 39, 0.5);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --frame: #080a06;
+  --frame-2: #12160d;
+  --frame-line: #232a1b;
+
+  --paper: #0c0e09;
+  --surface: #151910;
+  --surface-2: #1b2014;
+  --ink: #f0f2e8;
+  --ink-2: #bcc2b0;
+  --muted: #8e9482;
+  --line: #2a3022;
+  --line-2: #3a4230;
+
+  --brand-deep: #6fcb45;
+  --brand-tint: #1b2c14;
+
+  --ok: #46a82e;
+  --ok-bg: #1b2c14;
+  --ok-ink: #8fdb6b;
+  --warn: #f7b928;
+  --warn-bg: #33290d;
+  --warn-ink: #ffd36b;
+  --stop: #ef6a5f;
+  --stop-bg: #3a1714;
+  --stop-ink: #ff9a91;
+  --on-stop: #10130d;
+  --idle: #6f7663;
+  --info: #6c9be8;
+  --info-bg: #14233b;
+  --info-ink: #8db4f0;
+
+  --shadow-pop: 0 14px 38px rgba(0, 0, 0, 0.6);
+}
+
+@media (min-width: 720px) {
+  :root {
+    --gutter: 24px;
+  }
+}

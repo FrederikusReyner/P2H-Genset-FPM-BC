@@ -1,0 +1,15 @@
+# Paket & hasil build
+node_modules/
+dist/
+.vercel/
+
+# Rahasia & data lokal (JANGAN diunggah)
+.env
+.env.*
+!.env.example
+backend/.devdb/
+
+# Lain-lain
+*.log
+.DS_Store
+Thumbs.db
