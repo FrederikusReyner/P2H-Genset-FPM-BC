@@ -165,7 +165,7 @@ export function wakeServer() {
  * Cara ini jalan juga di iPhone dan aplikasi yang sudah dipasang.
  */
 export async function downloadFile(body: {
-  kind: 'p2h' | 'rekap';
+  kind: 'p2h' | 'rekap' | 'pmmr';
   format: 'pdf' | 'docx' | 'xlsx';
   id?: number;
   filters?: Record<string, string | number>;

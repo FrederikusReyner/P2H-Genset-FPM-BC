@@ -2,7 +2,7 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { Spinner } from './components/ui';
-import { CAN_FILL, useAuth } from './lib/auth';
+import { CAN_FILL, CAN_SIGN, useAuth } from './lib/auth';
 import type { Role } from './lib/types';
 import LoginPage from './pages/Login';
 import DashboardPage from './pages/Dashboard';
@@ -15,6 +15,7 @@ const FindingsPage = lazy(() => import('./pages/Findings'));
 const UnitsPage = lazy(() => import('./pages/Units'));
 const NotificationsPage = lazy(() => import('./pages/Notifications'));
 const RekapPage = lazy(() => import('./pages/Rekap'));
+const BulananPage = lazy(() => import('./pages/Bulanan'));
 const NewP2HPage = lazy(() => import('./pages/P2HForm').then((m) => ({ default: m.NewP2HPage })));
 const EditP2HPage = lazy(() => import('./pages/P2HForm').then((m) => ({ default: m.EditP2HPage })));
 const UsersPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.UsersPage })));
@@ -77,6 +78,14 @@ export default function App() {
               }
             />
             <Route path="rekap" element={<RekapPage />} />
+            <Route
+              path="bulanan"
+              element={
+                <RequireRole roles={CAN_SIGN}>
+                  <BulananPage />
+                </RequireRole>
+              }
+            />
             <Route path="temuan" element={<FindingsPage />} />
             <Route path="unit" element={<UnitsPage />} />
             <Route path="notifikasi" element={<NotificationsPage />} />

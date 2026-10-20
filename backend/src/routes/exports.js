@@ -10,6 +10,7 @@ import { buildFormDocx } from '../services/export/docx.js';
 import { buildFormPdf } from '../services/export/pdf.js';
 import { buildRekapDocx, buildRekapPdf, buildRekapXlsx, rekapPreview } from '../services/export/rekap.js';
 import { buildFormXlsx } from '../services/export/xlsx.js';
+import { buildPmmrXlsx } from '../services/pmmr/workbook.js';
 
 const r = Router();
 
@@ -23,7 +24,7 @@ const FORM_BUILD = { pdf: buildFormPdf, docx: buildFormDocx, xlsx: buildFormXlsx
 const REKAP_BUILD = { pdf: buildRekapPdf, docx: buildRekapDocx, xlsx: buildRekapXlsx };
 
 const TicketIn = z.object({
-  kind: z.enum(['p2h', 'rekap']),
+  kind: z.enum(['p2h', 'rekap', 'pmmr']),
   format: z.enum(['pdf', 'docx', 'xlsx']),
   id: z.number().int().optional(),
   filters: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
@@ -36,6 +37,7 @@ const TicketIn = z.object({
 r.post('/ticket', requireAuth, async (req, res) => {
   const b = parse(TicketIn, req.body);
   if (b.kind === 'p2h' && !b.id) throw badRequest('Nomor P2H diperlukan.');
+  if (b.kind === 'pmmr' && b.format !== 'xlsx') throw badRequest('Rekap PMMR hanya tersedia dalam format Excel.');
   const token = jwt.sign(
     { typ: 'export', kind: b.kind, format: b.format, id: b.id, filters: b.filters || {}, uid: req.user.id },
     config.jwtSecret,
@@ -69,6 +71,8 @@ r.get('/file', async (req, res) => {
     }
     out = await FORM_BUILD[p.format](p.id);
     if (!out) throw notFound('P2H tidak ditemukan.');
+  } else if (p.kind === 'pmmr') {
+    out = await buildPmmrXlsx(p.filters || {}, u);
   } else {
     out = await REKAP_BUILD[p.format](p.filters || {}, u);
   }

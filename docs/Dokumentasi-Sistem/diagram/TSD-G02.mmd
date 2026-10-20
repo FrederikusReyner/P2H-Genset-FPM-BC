@@ -1,0 +1,25 @@
+sequenceDiagram
+  autonumber
+  participant RT as Route p2h atau findings
+  participant PSH as push.js
+  participant DB as PostgreSQL
+  participant VND as Web Push vendor
+  participant SW as Service Worker HP
+  RT->>PSH: notifyEvent(kind, severity,<br/>siteId, actor)
+  PSH->>DB: INSERT notifications
+  alt VAPID belum diisi
+    PSH-->>RT: sent 0, hanya dalam aplikasi
+  else VAPID aktif
+    PSH->>DB: SELECT push_subscriptions<br/>yang berhak
+    PSH->>VND: sendNotification<br/>(TTL, urgency) lewat web-push
+    alt diterima
+      VND-->>PSH: sukses
+      PSH->>DB: UPDATE last_ok_at,<br/>fail_count 0
+      VND->>SW: push event
+      SW->>SW: showNotification dan<br/>beri tahu jendela terbuka
+    else 404 atau 410
+      PSH->>DB: DELETE push_subscriptions
+    else galat lain
+      PSH->>DB: fail_count + 1,<br/>hapus bila 8 atau lebih
+    end
+  end

@@ -90,6 +90,90 @@ async function seedUnits(log) {
   });
 }
 
+// Kolom tambahan data unit dari Excel PMMR (nama kolom sama dengan kunci di seed/pmmr.json)
+const PMMR_COLS = [
+  'made_in', 'weight_kg', 'engine_serial_no', 'engine_hp', 'engine_rpm',
+  'alt_brand', 'alt_made_in', 'alt_type', 'alt_serial_no', 'alt_phase', 'alt_freq', 'alt_base_kva', 'alt_base_kw',
+  'alt_voltage', 'alt_ampere', 'alt_cos_phi', 'alt_rpm', 'alt_avr',
+  'purchase_year', 'po_number', 'recommendation', 'remark', 'goh_total', 'goh_po_pi',
+  'issue', 'sko_expiry', 'sko_note', 'bib_location',
+];
+
+/** Unit arsip yang kolom site-nya kosong di Excel: tebak dari tulisan lokasi (Lati bila tidak jelas). */
+function siteFromLocation(loc) {
+  const t = String(loc || '').toUpperCase();
+  if (/BINUNGAN|BIB TO BIN/.test(t)) return 'BMO';
+  if (/SUARAN/.test(t)) return 'SRN';
+  if (/SAMBARATA/.test(t)) return 'SMO';
+  if (/GURIMBANG/.test(t)) return 'GMO';
+  return 'LMO';
+}
+
+/**
+ * Data awal dari Excel PMMR (sekali saja): melengkapi 25 unit produksi, menambah unit arsip
+ * (daftar "Breakdown & GOH", tidak ikut P2H), dan memasukkan HM bulanan yang sudah ada.
+ * Berkasnya dibuat dari Excel PMMR dengan:  node scripts/make-pmmr-seed.mjs "<berkas.xlsx>"
+ */
+async function seedPmmr(log) {
+  if (await flagDone('_seeded_pmmr')) return;
+  if (!fs.existsSync(path.join(config.root, 'seed', 'pmmr.json'))) return;
+  const data = readJson('pmmr.json');
+  const { rows: sites } = await query('SELECT id, code FROM sites');
+  const byCode = Object.fromEntries(sites.map((s) => [s.code, s.id]));
+  await tx(async (c) => {
+    let updated = 0;
+    let added = 0;
+    const idByCode = new Map();
+    for (const u of data.units) {
+      const found = (await c.query('SELECT id FROM units WHERE lower(code) = lower($1)', [u.code])).rows[0];
+      const vals = PMMR_COLS.map((k) => u[k] ?? null);
+      const goh = JSON.stringify(u.goh_history || []);
+      if (found) {
+        const n = PMMR_COLS.length;
+        const sets = PMMR_COLS.map((k, i) => `${k} = $${i + 2}`).join(', ');
+        await c.query(
+          `UPDATE units SET ${sets}, goh_history = $${n + 2}::jsonb, pmmr_group = $${n + 3}, pmmr_sort = $${n + 4}, updated_at = now() WHERE id = $1`,
+          [found.id, ...vals, goh, u.group, u.sort ?? null],
+        );
+        idByCode.set(u.code.toLowerCase(), found.id);
+        updated += 1;
+      } else if (u.group === 'arsip') {
+        const cols = [
+          'code', 'old_code', 'site_id', 'location', 'brand', 'model', 'serial_no', 'engine_model', 'capacity_kva', 'rated_kw',
+          'rated_voltage', 'rated_rpm', 'status', 'hm_master', 'pmmr_group', 'pmmr_status', 'pmmr_sort', ...PMMR_COLS,
+        ];
+        const base = [
+          u.code, u.old_code, byCode[u.site_code || siteFromLocation(u.location)], u.location, u.brand, u.model, u.serial_no, u.engine_model,
+          u.capacity_kva, u.alt_base_kw, u.alt_voltage, u.engine_rpm ?? u.alt_rpm, 'inactive', u.hm, 'arsip', u.pmmr_status, u.sort ?? null,
+        ];
+        const all = [...base, ...vals];
+        const ph = all.map((_, i) => `$${i + 1}`).join(',');
+        const ins = await c.query(
+          `INSERT INTO units (${cols.join(',')}, goh_history) VALUES (${ph}, $${all.length + 1}::jsonb) ON CONFLICT (lower(code)) DO NOTHING RETURNING id`,
+          [...all, goh],
+        );
+        if (ins.rowCount) {
+          idByCode.set(u.code.toLowerCase(), ins.rows[0].id);
+          added += 1;
+        }
+      }
+    }
+    let hmN = 0;
+    for (const h of data.hm_monthly || []) {
+      let id = idByCode.get(h.code.toLowerCase());
+      if (!id) id = (await c.query('SELECT id FROM units WHERE lower(code) = lower($1)', [h.code])).rows[0]?.id;
+      if (!id) continue;
+      const r = await c.query(
+        `INSERT INTO unit_hm_monthly (unit_id, year, month, hm_start, hm_end, source) VALUES ($1,$2,$3,$4,$5,'import') ON CONFLICT DO NOTHING`,
+        [id, h.year, h.month, h.hm_start, h.hm_end],
+      );
+      hmN += r.rowCount;
+    }
+    await setFlag(c, '_seeded_pmmr');
+    log(`[seed] data PMMR: ${updated} unit dilengkapi, ${added} unit arsip ditambah, ${hmN} baris HM bulanan`);
+  });
+}
+
 async function seedSettings() {
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
     await query(`INSERT INTO settings (key, value) VALUES ($1, $2::jsonb) ON CONFLICT (key) DO NOTHING`, [
@@ -127,5 +211,6 @@ export async function bootstrap(log = console.log) {
   await seedSettings();
   await seedChecklist(log);
   await seedUnits(log);
+  await seedPmmr(log);
   await seedAdmin(log);
 }

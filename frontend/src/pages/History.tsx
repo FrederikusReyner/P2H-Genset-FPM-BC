@@ -44,7 +44,7 @@ export default function HistoryPage() {
 
   const q = useHistory({ ...f, limit: LIMIT });
   const items = q.data?.items ?? [];
-  const units = useMemo(() => (unitsQ.data?.items ?? []).filter((u) => !f.site_id || u.site_id === f.site_id), [unitsQ.data, f.site_id]);
+  const units = useMemo(() => (unitsQ.data?.items ?? []).filter((u) => u.pmmr_group !== 'arsip' && (!f.site_id || u.site_id === f.site_id)), [unitsQ.data, f.site_id]);
   const canFill = !!user && CAN_FILL.includes(user.role);
 
   const range = (days: number) => set({ dari: addDays(today, -(days - 1)), sampai: today });

@@ -1,6 +1,6 @@
 // Bentuk data yang dikirim server (sama dengan nama kolom di database)
 
-export type Role = 'teknisi' | 'pengawas' | 'admin';
+export type Role = 'teknisi' | 'pengawas' | 'teknisi_pengawas' | 'admin';
 export type Condition = 'baik' | 'rusak' | 'perbaiki';
 export type Danger = 'AA' | 'A';
 export type ResultKind = 'baik' | 'temuan_a' | 'stop_aa';
@@ -102,6 +102,38 @@ export interface Unit {
   status: UnitStatus;
   hm_master: number | null;
   notes: string | null;
+  // data lengkap ala PMMR (boleh kosong; salinan lama di HP mungkin belum punya)
+  made_in?: string | null;
+  weight_kg?: number | null;
+  engine_serial_no?: string | null;
+  engine_hp?: number | null;
+  engine_rpm?: number | null;
+  alt_brand?: string | null;
+  alt_made_in?: string | null;
+  alt_type?: string | null;
+  alt_serial_no?: string | null;
+  alt_phase?: number | null;
+  alt_freq?: number | null;
+  alt_base_kva?: number | null;
+  alt_base_kw?: number | null;
+  alt_voltage?: number | null;
+  alt_ampere?: number | null;
+  alt_cos_phi?: number | null;
+  alt_rpm?: number | null;
+  alt_avr?: string | null;
+  purchase_year?: string | null;
+  po_number?: string | null;
+  recommendation?: string | null;
+  remark?: string | null;
+  goh_total?: string | null;
+  goh_po_pi?: string | null;
+  goh_history?: { year?: string | null; location?: string | null; hm?: number | null }[];
+  issue?: string | null;
+  sko_expiry?: string | null;
+  sko_note?: string | null;
+  pmmr_group?: 'produksi' | 'arsip';
+  pmmr_status?: string | null;
+  bib_location?: string | null;
   last_form_id: number | null;
   last_shift_date: string | null;
   last_shift: number | null;
@@ -113,6 +145,23 @@ export interface Unit {
   current_result: ResultKind | null;
   open_aa: number;
   open_a: number;
+}
+
+/** Satu baris di halaman Data bulanan (HM dihitung otomatis, kWh diisi manual). */
+export interface MonthlyItem {
+  id: number;
+  code: string;
+  old_code: string | null;
+  site_id: number;
+  site_code: string;
+  site_name: string;
+  brand: string | null;
+  model: string | null;
+  status: UnitStatus;
+  hm_start: number | null;
+  hm_end: number | null;
+  hm_source: string | null;
+  kwh: number | null;
 }
 
 export interface P2HListItem {
@@ -292,6 +341,7 @@ export interface Dashboard {
   context: { date: string; shift: 1 | 2; is_current: boolean; current: ShiftInfo };
   kpi: {
     required: number;
+    excluded: number;
     done: number;
     missing: number;
     stop: number;

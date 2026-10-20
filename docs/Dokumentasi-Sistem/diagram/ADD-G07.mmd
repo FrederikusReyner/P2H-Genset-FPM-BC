@@ -1,0 +1,19 @@
+sequenceDiagram
+  autonumber
+  actor TEK as Teknisi
+  participant SPA as Aplikasi HP
+  participant API as Server API
+  participant DB as PostgreSQL
+  participant PSH as Web Push
+  actor PGW as Pengawas
+  TEK->>SPA: Isi form, butir Rusak<br/>dengan catatan dan foto
+  SPA->>SPA: Kecilkan foto,<br/>periksa kelengkapan
+  SPA->>API: POST /api/p2h<br/>Bearer, client_uuid
+  API->>API: Periksa token, peran,<br/>site, aturan, foto
+  API->>DB: BEGIN, simpan form,<br/>jawaban, foto, audit, COMMIT
+  DB-->>API: id P2H
+  API-->>SPA: 201 hasil stop_aa
+  API->>DB: INSERT notifications,<br/>baca perangkat push
+  Note over API,DB: Filter penerima: site sama,<br/>bukan pembuat, sesuai mode
+  API->>PSH: Kirim push
+  PSH-->>PGW: Notifikasi STOP OPERASI

@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ApiError, api, onSlow, qs } from './api';
 import { loadSnapshot, saveSnapshot } from './cache';
-import type { Dashboard, Finding, Meta, Notice, P2HListItem, RekapPreview, Unit } from './types';
+import type { Dashboard, Finding, Meta, MonthlyItem, Notice, P2HListItem, RekapPreview, Unit } from './types';
 
 /** Ambil dari server; kalau tidak ada sinyal, pakai salinan terakhir yang tersimpan di HP. */
 async function withSnapshot<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
@@ -89,6 +89,15 @@ export function useRekapPreview(period: 'week' | 'month' | 'year', date: string,
     queryFn: () => api.get<RekapPreview>(`/api/exports/rekap-preview${qs({ period, date, site_id: siteId })}`),
     placeholderData: keepPreviousData,
     staleTime: 20_000,
+  });
+}
+
+export function useMonthly(year: number, month: number) {
+  return useQuery({
+    queryKey: ['monthly', year, month],
+    queryFn: () => api.get<{ year: number; month: number; items: MonthlyItem[] }>(`/api/bulanan${qs({ year, month })}`),
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
   });
 }
 

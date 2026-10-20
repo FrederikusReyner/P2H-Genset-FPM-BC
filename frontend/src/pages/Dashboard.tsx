@@ -105,6 +105,13 @@ export default function DashboardPage() {
               <b>
                 {kpi.done} dari {kpi.required} unit
               </b>
+              {kpi.excluded > 0 && (
+                <span className="hero__note">
+                  {kpi.excluded} genset breakdown tidak dihitung
+                  {' · '}
+                  <Link to="/unit">lihat</Link>
+                </span>
+              )}
             </div>
           </div>
           <div className="hero__bar">

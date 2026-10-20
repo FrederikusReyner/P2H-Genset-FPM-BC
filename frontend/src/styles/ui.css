@@ -808,6 +808,20 @@ select.input {
   margin-left: auto;
   font-weight: 400;
 }
+/* HP: daftar PDF / Excel / Word selalu muat di layar (dulu terpotong di sisi kiri), muncul di atas menu bawah */
+@media (max-width: 719.98px) {
+  .menu__list {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: auto;
+    bottom: calc(var(--safe-bottom, 0px) + 84px);
+    z-index: 70;
+    min-width: 0;
+    max-width: none;
+    box-shadow: 0 10px 30px rgba(16, 19, 13, 0.28);
+  }
+}
 
 .pager {
   display: flex;

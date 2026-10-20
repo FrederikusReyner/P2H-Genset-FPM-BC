@@ -13,7 +13,7 @@ import type { ChecklistSection, Role, Settings, UserRow } from '../lib/types';
    Pengguna
    ===================================================================== */
 
-const ROLES: Role[] = ['teknisi', 'pengawas', 'admin'];
+const ROLES: Role[] = ['teknisi', 'pengawas', 'teknisi_pengawas', 'admin'];
 
 async function copyText(s: string) {
   try {
@@ -331,7 +331,7 @@ function UserSheet({
             </label>
           )}
           <div className="small muted">
-            <b>Peran:</b> Teknisi = isi P2H dan perbarui temuan · Pengawas = periksa dan verifikasi P2H (tanda tangan) dan perbarui temuan · Admin = kelola akun, unit, daftar cek, dan pengaturan, melihat semua site. Teknisi dan pengawas hanya melihat site-nya.
+            <b>Peran:</b> Teknisi = isi P2H dan perbarui temuan · Pengawas = periksa dan verifikasi P2H (tanda tangan) dan perbarui temuan · Teknisi &amp; Pengawas = bisa isi P2H dan juga memverifikasi P2H orang lain di site-nya (P2H yang ia isi sendiri tetap harus diverifikasi orang lain) · Admin = kelola akun, unit, daftar cek, dan pengaturan, melihat semua site. Selain admin hanya melihat site-nya.
           </div>
           {err && (
             <div className="banner banner--stop" role="alert">
@@ -428,7 +428,7 @@ function ImportSheet({ open, onClose, onDone }: { open: boolean; onClose: () => 
             Blok semua barisnya, <b>salin (Ctrl+C)</b>, lalu <b>tempel (Ctrl+V)</b> di kotak bawah.
           </li>
           <li>
-            Peran: teknisi / pengawas / admin (juga boleh "electrician", "foreman", "spv"). Site: Binungan, Suaran, Gurimbang, Lati, Sambarata. Site wajib untuk teknisi dan pengawas.
+            Peran: teknisi / pengawas / teknisi &amp; pengawas / admin (juga boleh "electrician", "foreman", "spv"). Site: Binungan, Suaran, Gurimbang, Lati, Sambarata. Site wajib untuk semua peran selain admin.
           </li>
         </ol>
         <textarea className="input textarea mono" rows={8} value={text} onChange={(e) => { setText(e.target.value); setRes(null); }} placeholder={'12345\tAndi\tPT Mutiara Tanjung Lestari\tElectrician\tteknisi\tSuaran\n12346\tBudi\tPT Berau Coal\tForeman\tpengawas\tBinungan'} aria-label="Tempel dari Excel" />

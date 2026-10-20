@@ -42,7 +42,7 @@ const UserIn = z.object({
   company: z.string().trim().max(80).nullable().optional(),
   job_title: z.string().trim().max(60).nullable().optional(),
   phone: z.string().trim().max(30).nullable().optional(),
-  password: z.string().min(6).max(100).optional(),
+  password: z.string().min(5).max(100).optional(),
 });
 
 r.post('/', async (req, res) => {
@@ -109,6 +109,8 @@ r.post('/:id/reset-password', async (req, res) => {
 const ROLE_ALIAS = {
   teknisi: 'teknisi', mekanik: 'teknisi', electrician: 'teknisi', elektrik: 'teknisi', technician: 'teknisi',
   pengawas: 'pengawas', foreman: 'pengawas', spv: 'pengawas', supervisor: 'pengawas', pja: 'pengawas',
+  teknisi_pengawas: 'teknisi_pengawas', 'teknisi & pengawas': 'teknisi_pengawas', 'teknisi dan pengawas': 'teknisi_pengawas', 'teknisi/pengawas': 'teknisi_pengawas',
+  'teknisi-pengawas': 'teknisi_pengawas', 'teknisi pengawas': 'teknisi_pengawas', 'pengawas & teknisi': 'teknisi_pengawas', 'pengawas dan teknisi': 'teknisi_pengawas',
   admin: 'admin', administrator: 'admin',
 };
 
@@ -148,7 +150,7 @@ r.post('/import', async (req, res) => {
       if (!/^[A-Za-z0-9._-]{2,40}$/.test(nrp)) { fail('No SID tidak valid (hanya huruf, angka, titik, garis)'); continue; }
       if (u.name.trim().length < 2) { fail('Nama kosong'); continue; }
       const role = ROLE_ALIAS[(u.role || 'teknisi').trim().toLowerCase()];
-      if (!role) { fail(`Peran "${u.role}" tidak dikenal (teknisi / pengawas / admin)`); continue; }
+      if (!role) { fail(`Peran "${u.role}" tidak dikenal (teknisi / pengawas / teknisi & pengawas / admin)`); continue; }
       const siteId = findSite(u.site);
       if (siteId === undefined) { fail(`Site "${u.site}" tidak dikenal`); continue; }
       if (role !== 'admin' && !siteId) { fail('Site wajib diisi untuk teknisi / pengawas'); continue; }
@@ -157,7 +159,7 @@ r.post('/import', async (req, res) => {
       seen.add(key);
       const dup = await c.query('SELECT 1 FROM users WHERE lower(nrp) = $1', [key]);
       if (dup.rowCount) { fail('Sudah punya akun'); continue; }
-      const password = u.password && u.password.length >= 6 ? u.password : randomPassword();
+      const password = u.password && u.password.length >= 5 ? u.password : randomPassword();
       const hash = await bcrypt.hash(password, 10);
       await c.query(
         `INSERT INTO users (nrp, name, password_hash, role, site_id, company, job_title, must_change_password)

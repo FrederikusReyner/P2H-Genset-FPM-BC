@@ -1,0 +1,27 @@
+flowchart TB
+  subgraph PENG["HP atau komputer pengguna"]
+    BR["Peramban dan PWA terpasang"]
+  end
+  subgraph GH["GitHub, akun pribadi (INT-04)"]
+    REPO["Repository P2H-Genset-FPM-BC"]
+  end
+  subgraph RND["Render Web Service, paket gratis, region TBC (INT-02)"]
+    NODE["Node.js 20.12 sampai 24: Express melayani API dan web"]
+    ENV["Variabel lingkungan: DATABASE_URL, JWT_SECRET, VAPID, ADMIN"]
+  end
+  subgraph AIV["Aiven PostgreSQL, paket gratis, region TBC (INT-01)"]
+    PG[("Database P2H")]
+  end
+  subgraph VND["Vendor peramban"]
+    PS["Layanan Web Push (INT-03)"]
+  end
+  subgraph PEM["Komputer pemilik aplikasi"]
+    DBV["DBeaver"]
+  end
+  BR -->|"HTTPS"| NODE
+  REPO -->|"build dan deploy"| NODE
+  ENV --> NODE
+  NODE -->|"SQL di atas TLS"| PG
+  NODE -->|"HTTPS Web Push"| PS
+  PS -->|"notifikasi"| BR
+  DBV -->|"SQL di atas TLS, baca"| PG

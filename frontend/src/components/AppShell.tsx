@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Icon, type IconName } from './Icon';
 import { BrandLockup, MtlMark } from './ui';
 import { wakeServer } from '../lib/api';
-import { CAN_FILL, useAuth } from '../lib/auth';
+import { CAN_FILL, CAN_SIGN, useAuth } from '../lib/auth';
 import { useFindings, useMeta, useNotices, useOnline, useSlowServer } from '../lib/hooks';
 import { flushOutbox, onOutboxChange, removeFromOutbox, type OutboxItem } from '../lib/outbox';
 import { syncPush } from '../lib/push';
@@ -38,6 +38,7 @@ export function AppShell() {
   const toastedUpTo = useRef<number | null>(null);
 
   const canFill = !!user && CAN_FILL.includes(user.role);
+  const canSign = !!user && CAN_SIGN.includes(user.role);
   const openCount = open.data?.items.length ?? 0;
   const openAA = open.data?.items.filter((f) => f.danger_code === 'AA').length ?? 0;
   const unread = notices.data?.unread ?? 0;
@@ -140,6 +141,7 @@ export function AppShell() {
     ...(canFill ? [{ to: '/p2h/baru', label: 'P2H baru', icon: 'plus' as IconName }] : []),
     { to: '/p2h', label: 'Riwayat', icon: 'history', end: true },
     { to: '/rekap', label: 'Rekap', icon: 'chart' },
+    ...(canSign ? [{ to: '/bulanan', label: 'Data bulanan', icon: 'table' as IconName }] : []),
     { to: '/temuan', label: 'Temuan', icon: 'alert', badge: openCount },
     { to: '/unit', label: 'Unit genset', icon: 'bolt' },
     { to: '/akun', label: 'Akun saya', icon: 'user' },

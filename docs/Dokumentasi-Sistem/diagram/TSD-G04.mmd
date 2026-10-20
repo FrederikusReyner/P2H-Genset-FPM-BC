@@ -1,0 +1,93 @@
+erDiagram
+  sites ||--o{ units : "site_id"
+  sites |o--o{ users : "site_id"
+  sites ||--o{ p2h_forms : "site_id"
+  units ||--o{ p2h_forms : "unit_id"
+  users ||--o{ p2h_forms : "user_id"
+  users |o--o{ p2h_forms : "sup_user_id"
+  checklist_sections ||--o{ checklist_items : "section_id"
+  checklist_items |o--o{ p2h_answers : "item_id"
+  p2h_forms ||--o{ p2h_answers : "form_id"
+  p2h_answers ||--o{ p2h_photos : "answer_id"
+  p2h_forms ||--o{ p2h_photos : "form_id"
+  users ||--o{ push_subscriptions : "user_id"
+  sites |o--o{ notifications : "site_id"
+  units |o--o{ notifications : "unit_id"
+  p2h_forms |o--o{ notifications : "form_id"
+  users |o--o{ notifications : "actor_user_id"
+  users |o..o{ audit_log : "user_id tanpa FK"
+  sites {
+    int id PK
+    text code UK
+    text name
+    text job_site
+  }
+  users {
+    int id PK
+    text nrp UK
+    text role
+    int site_id FK
+    text company
+  }
+  units {
+    int id PK
+    text code UK
+    int site_id FK
+    text status
+  }
+  checklist_sections {
+    int id PK
+    text code UK
+  }
+  checklist_items {
+    int id PK
+    int section_id FK
+    text danger_code
+  }
+  p2h_forms {
+    bigint id PK
+    uuid client_uuid UK
+    int unit_id FK
+    int site_id FK
+    date shift_date
+    smallint shift
+    int user_id FK
+    int sup_user_id FK
+    text result
+  }
+  p2h_answers {
+    bigint id PK
+    bigint form_id FK
+    int item_id FK
+    text condition
+    text fix_status
+  }
+  p2h_photos {
+    bigint id PK
+    bigint answer_id FK
+    bigint form_id FK
+    bytea data
+  }
+  notifications {
+    bigint id PK
+    text kind
+    int site_id FK
+    int unit_id FK
+    bigint form_id FK
+    int actor_user_id FK
+  }
+  push_subscriptions {
+    bigint id PK
+    int user_id FK
+    text endpoint UK
+  }
+  settings {
+    text key PK
+    jsonb value
+  }
+  audit_log {
+    bigint id PK
+    int user_id
+    text action
+    text entity
+  }

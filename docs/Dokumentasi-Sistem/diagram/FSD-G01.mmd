@@ -1,0 +1,53 @@
+flowchart TB
+  A1["ACT-01<br/>Teknisi"]
+  A2["ACT-02<br/>Pengawas"]
+  A3["ACT-03<br/>Admin"]
+  subgraph GA["Semua peran"]
+    U01["UC-01<br/>Masuk"]
+    U02["UC-02<br/>Ganti password"]
+    U08["UC-08<br/>Pantau dashboard"]
+    U09["UC-09<br/>Riwayat dan detail"]
+    U10["UC-10<br/>Rekap dan unduh"]
+    U07["UC-07<br/>Tindak lanjut temuan"]
+    U15["UC-15<br/>Notifikasi HP"]
+    U16["UC-16<br/>Tanda tangan saya"]
+    U17["UC-17<br/>Pasang aplikasi"]
+  end
+  subgraph GB["Teknisi dan Admin"]
+    U03["UC-03 Isi P2H baru"]
+    U04["UC-04 Kirim saat tanpa sinyal"]
+    U05["UC-05 Ubah P2H"]
+  end
+  subgraph GC["Pengawas dan Admin"]
+    U06["UC-06 Verifikasi P2H"]
+  end
+  subgraph GD["Hanya Admin"]
+    U11["UC-11 Kelola unit"]
+    U12["UC-12 Kelola akun"]
+    U13["UC-13 Impor akun"]
+    U14["UC-14 Daftar cek dan pengaturan"]
+    U18["UC-18 Hapus P2H dan batalkan verifikasi"]
+  end
+  subgraph GE["Sistem dan operator"]
+    U19["UC-19 Kesehatan layanan dan penyiapan database"]
+  end
+  A6["ACT-06 Health check Render"]
+  A5["ACT-05 Pemilik aplikasi"]
+  A4["ACT-04 Layanan Web Push"]
+  U01 ~~~ U08 ~~~ U10 ~~~ U15 ~~~ U17
+  U02 ~~~ U09 ~~~ U07 ~~~ U16
+  U03 ~~~ U04 ~~~ U05
+  U11 ~~~ U12 ~~~ U13 ~~~ U14 ~~~ U18
+  GA ~~~ GE
+  GB ~~~ GC ~~~ GD
+  A1 --> GA
+  A2 --> GA
+  A3 --> GA
+  A1 --> GB
+  A3 --> GB
+  A2 --> GC
+  A3 --> GC
+  A3 --> GD
+  A6 --> GE
+  A5 --> GE
+  U15 --- A4

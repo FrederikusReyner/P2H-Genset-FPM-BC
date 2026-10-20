@@ -17,4 +17,4 @@ export function segments(s) {
 export const CONDITION_LABEL = { baik: 'Baik', rusak: 'Rusak', perbaiki: 'Perbaiki' };
 export const RESULT_LABEL = { baik: 'Semua baik', temuan_a: 'Ada temuan (A)', stop_aa: 'STOP OPERASI (AA)' };
 export const FIX_LABEL = { open: 'Belum diperbaiki', in_progress: 'Sedang diperbaiki', closed: 'Selesai diperbaiki' };
-export const ROLE_LABEL = { teknisi: 'Teknisi', pengawas: 'Pengawas', admin: 'Admin' };
+export const ROLE_LABEL = { teknisi: 'Teknisi', pengawas: 'Pengawas', teknisi_pengawas: 'Teknisi & Pengawas', admin: 'Admin' };

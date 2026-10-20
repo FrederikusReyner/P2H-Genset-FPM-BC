@@ -111,6 +111,8 @@ r.get('/', async (req, res) => {
   const required = units.filter((u) => u.required);
   const kpi = {
     required: required.length,
+    // genset yang tidak wajib P2H shift ini (breakdown): ada di daftar tetapi tidak masuk hitungan
+    excluded: units.length - required.length,
     done: required.filter((u) => u.done).length,
     missing: required.filter((u) => !u.done).length,
     stop: units.filter((u) => u.state === 'stop').length,

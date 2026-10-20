@@ -1,0 +1,41 @@
+flowchart LR
+  subgraph FE["Frontend CMP-01"]
+    PGS["pages: Login, Dashboard, P2HForm, P2HDetail, History, Rekap, Findings, Units, Notifications, Account, Admin"]
+    LIB["lib: api, auth, outbox, photos, push, cache, hooks"]
+  end
+  subgraph RT["Routes CMP-02"]
+    r1["auth.js: API-02, API-05 sampai API-08"]
+    r2["meta.js: API-09"]
+    r3["units.js: API-10 sampai API-13"]
+    r4["p2h.js: API-14 sampai API-22"]
+    r5["findings.js: API-23, API-24"]
+    r6["dashboard.js: API-25"]
+    r7["users.js: API-26 sampai API-30"]
+    r8["admin.js: API-31 sampai API-37"]
+    r9["notifications.js: API-03, API-38 sampai API-42"]
+    r10["photos.js: API-43"]
+    r11["exports.js: API-04, API-44, API-45"]
+  end
+  subgraph SV["Middleware dan services"]
+    m1["middleware: auth dan validate"]
+    s1["push.js"]
+    s2["export: pdf, docx, xlsx, rekap"]
+    s3["settings.js dan audit.js"]
+  end
+  DBN[("db.js: pool pg dan transaksi")]
+  subgraph EN["Entitas"]
+    e1["ENT-01 sampai ENT-05, ENT-11"]
+    e2["ENT-06 sampai ENT-08"]
+    e3["ENT-09, ENT-10, ENT-12"]
+  end
+  PGS --> LIB
+  LIB -->|"REST JSON"| RT
+  RT --> m1
+  r4 --> s1
+  r5 --> s1
+  r11 --> s2
+  r8 --> s3
+  RT --> DBN
+  DBN --> e1
+  DBN --> e2
+  DBN --> e3

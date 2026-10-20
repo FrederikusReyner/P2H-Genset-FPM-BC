@@ -15,6 +15,7 @@ import dashboardRoutes from './routes/dashboard.js';
 import exportRoutes from './routes/exports.js';
 import findingsRoutes from './routes/findings.js';
 import metaRoutes from './routes/meta.js';
+import monthlyRoutes from './routes/monthly.js';
 import notificationRoutes from './routes/notifications.js';
 import photoRoutes from './routes/photos.js';
 import p2hRoutes from './routes/p2h.js';
@@ -118,6 +119,7 @@ export function createApp() {
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/photos', photoRoutes);
+  app.use('/api/bulanan', monthlyRoutes);
   app.use('/api/exports', exportRoutes);
 
   app.use('/api', (_req, res) => {

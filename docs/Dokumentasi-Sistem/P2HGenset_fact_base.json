@@ -1,0 +1,2596 @@
+{
+  "schema_version": "1.0",
+  "app_name": "P2H Genset",
+  "documented_at": "2026-10-20",
+  "source_mode": "A_workspace",
+  "sources": {
+    "app_url": "",
+    "repo_url": "https://github.com/FrederikusReyner/P2H-Genset-FPM-BC",
+    "chat_link": "",
+    "zip_uploaded": false,
+    "screenshots": 19,
+    "unreachable_sources": [
+      "URL aplikasi produksi tidak ditemukan di berkas proyek (tidak dibuka)",
+      "Repository GitHub tidak dibuka lewat web; kode dibaca dari folder kerja lokal dan klonnya"
+    ]
+  },
+  "actors": [
+    {
+      "id": "ACT-01",
+      "name": "Teknisi",
+      "type": "human",
+      "description": "Mengisi P2H genset, melampirkan foto kerusakan, memperbarui tindak lanjut temuan. Hanya melihat dan mengisi di site yang ditetapkan admin. [KODE: backend/src/middleware/auth.js:6-9]"
+    },
+    {
+      "id": "ACT-02",
+      "name": "Pengawas",
+      "type": "human",
+      "description": "Memeriksa lalu memverifikasi (tanda tangan) P2H di site-nya, memperbarui tindak lanjut temuan. Tidak boleh mengisi P2H. [KODE: backend/src/middleware/auth.js:7-9]"
+    },
+    {
+      "id": "ACT-03",
+      "name": "Admin",
+      "type": "human",
+      "description": "Mengelola akun, unit genset, daftar cek, dan pengaturan; melihat semua site; boleh mengisi, memverifikasi, membatalkan verifikasi, dan menghapus P2H. [KODE: backend/src/middleware/auth.js:46]"
+    },
+    {
+      "id": "ACT-04",
+      "name": "Layanan Web Push peramban (FCM / Apple / Mozilla)",
+      "type": "system",
+      "description": "Layanan milik vendor peramban yang meneruskan notifikasi ke HP; alamatnya (endpoint) disimpan per perangkat. [KODE: backend/src/services/push.js:66-90]"
+    },
+    {
+      "id": "ACT-05",
+      "name": "Pemilik aplikasi / admin teknis (klien DBeaver)",
+      "type": "human",
+      "description": "Melihat isi database secara hanya-baca memakai DBeaver dan 15 query siap pakai. [KODE: README.md:111-113] [KODE: docs/Query-DBeaver.sql]"
+    },
+    {
+      "id": "ACT-06",
+      "name": "Health check Render / monitor uptime",
+      "type": "system",
+      "description": "Memanggil GET /api/health tanpa login untuk memeriksa layanan hidup. [KODE: backend/src/app.js:87-103]"
+    }
+  ],
+  "modules": [
+    {
+      "id": "MOD-01",
+      "name": "Autentikasi dan Akun Saya",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/auth.js] [KODE: frontend/src/pages/Login.tsx] [KODE: frontend/src/pages/Account.tsx]"
+    },
+    {
+      "id": "MOD-02",
+      "name": "Form P2H (isi, ubah, foto, draf, antrean offline)",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:22-132] [KODE: frontend/src/pages/P2HForm.tsx]"
+    },
+    {
+      "id": "MOD-03",
+      "name": "Verifikasi Pengawas",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:564-616] [KODE: frontend/src/pages/P2HDetail.tsx:424-501]"
+    },
+    {
+      "id": "MOD-04",
+      "name": "Temuan dan Tindak Lanjut",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/findings.js] [KODE: frontend/src/pages/Findings.tsx]"
+    },
+    {
+      "id": "MOD-05",
+      "name": "Dashboard",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/dashboard.js] [KODE: frontend/src/pages/Dashboard.tsx]"
+    },
+    {
+      "id": "MOD-06",
+      "name": "Riwayat dan Rekap (mingguan / bulanan / tahunan)",
+      "status": "DONE",
+      "evidence": "[KODE: frontend/src/pages/History.tsx] [KODE: frontend/src/pages/Rekap.tsx] [KODE: backend/src/services/export/rekap.js:113-257]"
+    },
+    {
+      "id": "MOD-07",
+      "name": "Unit Genset (data induk)",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/units.js] [KODE: frontend/src/pages/Units.tsx]"
+    },
+    {
+      "id": "MOD-08",
+      "name": "Administrasi (pengguna, impor akun, daftar cek, pengaturan, catatan aktivitas)",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/users.js] [KODE: backend/src/routes/admin.js] [KODE: frontend/src/pages/Admin.tsx]"
+    },
+    {
+      "id": "MOD-09",
+      "name": "Pemberitahuan (dalam aplikasi dan Web Push)",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/notifications.js] [KODE: backend/src/services/push.js] Uji di HP asli belum dilakukan [KODE: README.md:159]"
+    },
+    {
+      "id": "MOD-10",
+      "name": "Ekspor Dokumen (PDF / Word / Excel)",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/exports.js] [KODE: backend/src/services/export/]"
+    },
+    {
+      "id": "MOD-11",
+      "name": "PWA dan Kerja Tanpa Sinyal",
+      "status": "DONE",
+      "evidence": "[KODE: frontend/src/sw.ts] [KODE: frontend/src/lib/outbox.ts] [KODE: frontend/vite.config.ts:10-45] Kamera HP asli belum diuji [KODE: README.md:159]"
+    },
+    {
+      "id": "MOD-12",
+      "name": "Platform Server (penyajian web, migrasi, seed, health, keamanan)",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/app.js] [KODE: backend/src/bootstrap.js] [KODE: backend/src/migrate.js] [KODE: backend/src/index.js]"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "FR-01",
+      "module": "MOD-01",
+      "statement": "Sebagai pengguna, saya dapat masuk dengan No SID dan password sehingga hanya saya yang memakai akun saya.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/auth.js:12-41] [KODE: frontend/src/pages/Login.tsx:22-34]"
+    },
+    {
+      "id": "FR-02",
+      "module": "MOD-01",
+      "statement": "Sebagai pengguna baru atau yang passwordnya direset, saya wajib membuat password sendiri sebelum memakai aplikasi sehingga password dari admin tidak dipakai terus.",
+      "status": "DONE",
+      "evidence": "[KODE: frontend/src/App.tsx:32-39] [KODE: frontend/src/pages/Account.tsx:458-477]"
+    },
+    {
+      "id": "FR-03",
+      "module": "MOD-01",
+      "statement": "Sebagai pengguna, saya dapat mengganti password sehingga akun saya tetap aman; perangkat lain otomatis keluar.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/auth.js:48-71]"
+    },
+    {
+      "id": "FR-04",
+      "module": "MOD-01",
+      "statement": "Sebagai admin, saya ingin sesi pengguna berakhir saat akunnya dinonaktifkan, diganti peran atau site-nya, atau di-reset sehingga hak lama tidak terbawa.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/middleware/auth.js:28-31] [KODE: backend/src/routes/users.js:81-87]"
+    },
+    {
+      "id": "FR-05",
+      "module": "MOD-01",
+      "statement": "Sebagai teknisi atau pengawas, saya dapat menyimpan tanda tangan gambar saya sehingga tidak perlu menggambar ulang tiap kali.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/auth.js:73-78] [KODE: frontend/src/pages/Account.tsx:312-369]"
+    },
+    {
+      "id": "FR-06",
+      "module": "MOD-01",
+      "statement": "Sebagai pengguna, saya dapat memilih jenis pemberitahuan (Semua P2H atau Hanya temuan) sehingga tidak kebanjiran notifikasi; admin juga dapat memilih site yang diikuti.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/auth.js:80-95] [KODE: frontend/src/pages/Account.tsx:220-253]"
+    },
+    {
+      "id": "FR-07",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya dapat memilih genset di site saya, tanggal, dan shift sehingga P2H tercatat pada unit yang benar.",
+      "status": "DONE",
+      "evidence": "[KODE: frontend/src/pages/P2HForm.tsx:867-956] [KODE: backend/src/routes/p2h.js:386-395]"
+    },
+    {
+      "id": "FR-08",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya mengisi setiap butir daftar cek dengan Baik, Rusak, atau Perbaiki sehingga kondisi genset terekam lengkap.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:91-132] [KODE: frontend/src/pages/P2HForm.tsx:296-328]"
+    },
+    {
+      "id": "FR-09",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya wajib menulis catatan dan melampirkan foto pada butir Rusak atau Perbaiki sehingga pengawas punya bukti.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:111-127] [KODE: frontend/src/pages/P2HForm.tsx:311-314]"
+    },
+    {
+      "id": "FR-10",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya ingin foto dikecilkan otomatis di HP sehingga cepat terkirim walau sinyal lemah.",
+      "status": "DONE",
+      "evidence": "[KODE: frontend/src/lib/photos.ts:5-48] [KODE: backend/src/middleware/validate.js:55-72]"
+    },
+    {
+      "id": "FR-11",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya dapat mengisi parameter panel genset (6 parameter, kosongan dan berbeban) sehingga kondisi operasi tercatat.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/params.js] [KODE: frontend/src/pages/P2HForm.tsx:317-324]"
+    },
+    {
+      "id": "FR-12",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya dapat mengisi HM awal (otomatis dari HM terakhir) dan HM akhir (boleh nanti) sehingga jam operasi terekam.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:68-75] [KODE: frontend/src/pages/P2HForm.tsx:209-218]"
+    },
+    {
+      "id": "FR-13",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya menandatangani P2H dengan gambar di layar sehingga ada bukti pengisi.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:400-405] [KODE: backend/src/services/settings.js:3-8]"
+    },
+    {
+      "id": "FR-14",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya melihat hasil P2H (Semua baik / Ada temuan A / STOP OPERASI AA) sehingga tahu dampaknya pada unit.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:134-144]"
+    },
+    {
+      "id": "FR-15",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya ingin satu unit hanya punya satu P2H per tanggal dan shift sehingga tidak ada data ganda.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/sql/001_init.sql:122] [KODE: backend/src/routes/p2h.js:426-438]"
+    },
+    {
+      "id": "FR-16",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya hanya dapat mengisi P2H untuk shift hari ini sampai 7 hari ke belakang sehingga tanggal masuk akal.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:58-66]"
+    },
+    {
+      "id": "FR-17",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi, saya ingin isian tersimpan sebagai draf di HP sehingga aman bila layar mati atau aplikasi tertutup.",
+      "status": "DONE",
+      "evidence": "[KODE: frontend/src/pages/P2HForm.tsx:143-203]"
+    },
+    {
+      "id": "FR-18",
+      "module": "MOD-11",
+      "statement": "Sebagai teknisi di area tanpa sinyal, saya ingin P2H tersimpan di HP dan terkirim otomatis begitu sinyal kembali tanpa data ganda.",
+      "status": "DONE",
+      "evidence": "[KODE: frontend/src/lib/outbox.ts:62-95] [KODE: backend/src/routes/p2h.js:381-384]"
+    },
+    {
+      "id": "FR-19",
+      "module": "MOD-02",
+      "statement": "Sebagai teknisi pembuat P2H, saya dapat mengubah P2H (mis. mengisi HM akhir) selama belum diverifikasi sehingga salah isi dapat dikoreksi.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:468-562] [KODE: backend/src/routes/p2h.js:286-295]"
+    },
+    {
+      "id": "FR-20",
+      "module": "MOD-02",
+      "statement": "Sebagai admin, saya dapat menghapus P2H (data uji atau salah isi) sehingga data bersih; jawaban dan foto ikut terhapus.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:620-626]"
+    },
+    {
+      "id": "FR-21",
+      "module": "MOD-03",
+      "statement": "Sebagai pengawas, saya memverifikasi P2H dengan tanda tangan sehingga statusnya berubah menjadi Terverifikasi.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:575-602]"
+    },
+    {
+      "id": "FR-22",
+      "module": "MOD-03",
+      "statement": "Sebagai pengawas, saya ingin P2H yang sudah terverifikasi terkunci dari perubahan teknisi sehingga isi yang saya periksa tidak berubah.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:290-291, 481]"
+    },
+    {
+      "id": "FR-23",
+      "module": "MOD-03",
+      "statement": "Sebagai admin, saya dapat membatalkan verifikasi sehingga P2H dapat dikoreksi bila ada kesalahan.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:604-616]"
+    },
+    {
+      "id": "FR-24",
+      "module": "MOD-04",
+      "statement": "Sebagai pengguna, saya melihat daftar temuan terbuka dan selesai yang digabung per unit dan butir, dengan STOP (AA) di atas, sehingga prioritas jelas.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/findings.js:22-118]"
+    },
+    {
+      "id": "FR-25",
+      "module": "MOD-04",
+      "statement": "Sebagai teknisi atau pengawas, saya menandai temuan Sedang diperbaiki atau Selesai (catatan wajib saat selesai) sehingga status unit terkini.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/findings.js:120-171]"
+    },
+    {
+      "id": "FR-26",
+      "module": "MOD-04",
+      "statement": "Sebagai pengguna, saya diberi tahu bila unit boleh jalan lagi (tidak ada temuan AA tersisa) sehingga unit tidak menganggur.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/findings.js:161-181]"
+    },
+    {
+      "id": "FR-27",
+      "module": "MOD-05",
+      "statement": "Sebagai pengguna, saya melihat ringkasan shift (persen unit sudah P2H, temuan terbuka, belum P2H, menunggu verifikasi, status per site dan unit) sehingga cepat tahu yang perlu ditindak.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/dashboard.js:27-125] [KODE: frontend/src/pages/Dashboard.tsx:95-149]"
+    },
+    {
+      "id": "FR-28",
+      "module": "MOD-05",
+      "statement": "Sebagai pemilik proses, saya ingin genset berstatus breakdown tidak dihitung wajib P2H sehingga persentase tidak turun karena unit yang memang rusak; jumlahnya ditampilkan.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/dashboard.js:15-25, 112-115] [USER: keputusan 17 Okt 2026, breakdown tidak wajib P2H]"
+    },
+    {
+      "id": "FR-29",
+      "module": "MOD-05",
+      "statement": "Sebagai pengguna, saya melihat tren kepatuhan harian, temuan terbanyak 30 hari, temuan per site, dan P2H terbaru sehingga pola terlihat; data diperbarui otomatis tiap 45 detik.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/dashboard.js:128-168] [KODE: frontend/src/lib/hooks.ts:42-50]"
+    },
+    {
+      "id": "FR-30",
+      "module": "MOD-06",
+      "statement": "Sebagai pengguna, saya mencari riwayat P2H dengan penyaring tanggal, site, unit, shift, hasil, kata kunci, P2H saya, dan menunggu verifikasi sehingga mudah menemukan data.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:302-354] [KODE: frontend/src/pages/History.tsx]"
+    },
+    {
+      "id": "FR-31",
+      "module": "MOD-06",
+      "statement": "Sebagai pengguna, saya melihat rekap Mingguan, Bulanan, atau Tahunan (ringkasan, rincian per hari/minggu/bulan, per site, kepatuhan perkiraan) sehingga laporan berkala siap.",
+      "status": "DONE",
+      "evidence": "[KODE: frontend/src/pages/Rekap.tsx] [KODE: backend/src/time.js:104-115] [KODE: backend/src/services/export/rekap.js:113-257]"
+    },
+    {
+      "id": "FR-32",
+      "module": "MOD-10",
+      "statement": "Sebagai pengguna, saya mengunduh satu P2H sebagai PDF, Word, atau Excel lengkap dengan foto dan status verifikasi sehingga dapat dicetak atau diarsipkan.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/exports.js:32-80] [KODE: backend/src/services/export/pdf.js:68] [KODE: backend/src/services/export/docx.js:58] [KODE: backend/src/services/export/xlsx.js:19]"
+    },
+    {
+      "id": "FR-33",
+      "module": "MOD-10",
+      "statement": "Sebagai pengguna, saya mengunduh rekap (riwayat terfilter atau periode) sebagai PDF, Word, atau Excel sehingga laporan dapat dibagikan.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/services/export/rekap.js:18-21, 125]"
+    },
+    {
+      "id": "FR-34",
+      "module": "MOD-07",
+      "statement": "Sebagai pengguna, saya melihat daftar genset dengan status, HM terakhir, P2H terakhir, dan temuan terbuka sehingga data induk mudah dipantau.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/units.js:17-55] [KODE: frontend/src/pages/Units.tsx:13-151]"
+    },
+    {
+      "id": "FR-35",
+      "module": "MOD-07",
+      "statement": "Sebagai admin, saya menambah, mengubah, dan menghapus unit sehingga data induk mutakhir; unit yang sudah punya riwayat hanya bisa dinonaktifkan.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/units.js:82-118]"
+    },
+    {
+      "id": "FR-36",
+      "module": "MOD-08",
+      "statement": "Sebagai admin, saya membuat akun dengan Nama, Perusahaan, Jabatan, No SID, peran, dan site sehingga setiap orang punya akun pribadi.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/users.js:20-62]"
+    },
+    {
+      "id": "FR-37",
+      "module": "MOD-08",
+      "statement": "Sebagai admin, saya mengimpor banyak akun dengan menempel dari Excel (maks. 500 baris) sehingga pembuatan akun cepat.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/users.js:107-176] [KODE: frontend/src/pages/Admin.tsx:371-467]"
+    },
+    {
+      "id": "FR-38",
+      "module": "MOD-08",
+      "statement": "Sebagai admin, saya mengubah, menonaktifkan akun, dan mereset password sehingga akses terkendali; saya tidak bisa menonaktifkan atau menurunkan diri sendiri.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/users.js:64-105]"
+    },
+    {
+      "id": "FR-39",
+      "module": "MOD-08",
+      "statement": "Sebagai admin, saya mengelola butir daftar cek (tambah, ubah, geser, aktif/nonaktif) sehingga form mengikuti revisi prosedur; P2H lama tidak berubah.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/admin.js:40-118] [KODE: frontend/src/pages/Admin.tsx:473-599]"
+    },
+    {
+      "id": "FR-40",
+      "module": "MOD-08",
+      "statement": "Sebagai admin, saya mengatur jam mulai Shift I dan II, batas jam perbaikan temuan A, dan kewajiban tanda tangan, serta melihat catatan aktivitas sehingga aturan form dapat disesuaikan.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/admin.js:15-38, 120-128]"
+    },
+    {
+      "id": "FR-41",
+      "module": "MOD-09",
+      "statement": "Sebagai pengguna, saya melihat pemberitahuan di dalam aplikasi (lonceng) sesuai site dan jenis pilihan saya sehingga tidak ketinggalan kabar.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/routes/notifications.js:18-48] [KODE: frontend/src/pages/Notifications.tsx:18-27]"
+    },
+    {
+      "id": "FR-42",
+      "module": "MOD-09",
+      "statement": "Sebagai pengguna, saya mengaktifkan notifikasi di HP sehingga diberi tahu walau aplikasi tertutup; di iPhone harus dipasang di Layar Utama.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/services/push.js:29-64] [KODE: frontend/src/lib/push.ts] [KODE: frontend/src/sw.ts:33-61]"
+    },
+    {
+      "id": "FR-43",
+      "module": "MOD-11",
+      "statement": "Sebagai pengguna, saya memasang aplikasi di HP dan tetap dapat membukanya tanpa sinyal (dengan salinan data terakhir) serta diberi tahu bila ada versi baru.",
+      "status": "DONE",
+      "evidence": "[KODE: frontend/src/sw.ts:9-15] [KODE: frontend/src/lib/pwa.ts] [KODE: frontend/src/lib/cache.ts]"
+    },
+    {
+      "id": "FR-44",
+      "module": "MOD-12",
+      "statement": "Sebagai pemilik data, saya ingin teknisi dan pengawas hanya melihat dan mengubah data site-nya sehingga data site lain terlindung.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/middleware/auth.js:42-46] Diuji otomatis: [KODE: backend/tests/api.test.js:194-211, 354-378]"
+    },
+    {
+      "id": "FR-45",
+      "module": "MOD-12",
+      "statement": "Sebagai operator, saya ingin server menyiapkan database sendiri saat pertama hidup (tabel, site, daftar cek, unit, admin awal) sehingga pemasangan sederhana.",
+      "status": "DONE",
+      "evidence": "[KODE: backend/src/bootstrap.js:124-131] [KODE: backend/src/index.js:17-33]"
+    }
+  ],
+  "use_cases": [
+    {
+      "id": "UC-01",
+      "name": "Masuk ke aplikasi",
+      "actors": [
+        "ACT-01",
+        "ACT-02",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-01",
+        "FR-02",
+        "FR-04"
+      ],
+      "screens": [
+        "SCR-01",
+        "SCR-02"
+      ],
+      "apis": [
+        "API-02",
+        "API-05"
+      ],
+      "entities": [
+        "ENT-02"
+      ],
+      "rules": [
+        "BR-19",
+        "BR-23",
+        "BR-32"
+      ]
+    },
+    {
+      "id": "UC-02",
+      "name": "Mengganti password",
+      "actors": [
+        "ACT-01",
+        "ACT-02",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-02",
+        "FR-03"
+      ],
+      "screens": [
+        "SCR-02",
+        "SCR-16"
+      ],
+      "apis": [
+        "API-06"
+      ],
+      "entities": [
+        "ENT-02"
+      ],
+      "rules": [
+        "BR-21",
+        "BR-32"
+      ]
+    },
+    {
+      "id": "UC-03",
+      "name": "Mengisi P2H baru",
+      "actors": [
+        "ACT-01",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-07",
+        "FR-08",
+        "FR-09",
+        "FR-10",
+        "FR-11",
+        "FR-12",
+        "FR-13",
+        "FR-14",
+        "FR-15",
+        "FR-16",
+        "FR-17",
+        "FR-45"
+      ],
+      "screens": [
+        "SCR-04",
+        "SCR-05"
+      ],
+      "apis": [
+        "API-09",
+        "API-10",
+        "API-16"
+      ],
+      "entities": [
+        "ENT-03",
+        "ENT-05",
+        "ENT-06",
+        "ENT-07",
+        "ENT-08",
+        "ENT-09",
+        "ENT-12"
+      ],
+      "rules": [
+        "BR-01",
+        "BR-02",
+        "BR-03",
+        "BR-04",
+        "BR-05",
+        "BR-06",
+        "BR-07",
+        "BR-08",
+        "BR-09",
+        "BR-10",
+        "BR-11",
+        "BR-15",
+        "BR-35"
+      ]
+    },
+    {
+      "id": "UC-04",
+      "name": "Mengirim P2H saat tanpa sinyal",
+      "actors": [
+        "ACT-01",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-17",
+        "FR-18"
+      ],
+      "screens": [
+        "SCR-04",
+        "SCR-05"
+      ],
+      "apis": [
+        "API-16"
+      ],
+      "entities": [
+        "ENT-15"
+      ],
+      "rules": [
+        "BR-06",
+        "BR-35"
+      ]
+    },
+    {
+      "id": "UC-05",
+      "name": "Mengubah P2H",
+      "actors": [
+        "ACT-01",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-19"
+      ],
+      "screens": [
+        "SCR-07",
+        "SCR-06"
+      ],
+      "apis": [
+        "API-15",
+        "API-17"
+      ],
+      "entities": [
+        "ENT-06",
+        "ENT-07",
+        "ENT-08",
+        "ENT-12"
+      ],
+      "rules": [
+        "BR-01",
+        "BR-02",
+        "BR-03",
+        "BR-12",
+        "BR-34"
+      ]
+    },
+    {
+      "id": "UC-06",
+      "name": "Memverifikasi P2H",
+      "actors": [
+        "ACT-02",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-21",
+        "FR-22",
+        "FR-23"
+      ],
+      "screens": [
+        "SCR-07",
+        "SCR-09"
+      ],
+      "apis": [
+        "API-18",
+        "API-19",
+        "API-20",
+        "API-21"
+      ],
+      "entities": [
+        "ENT-06",
+        "ENT-12"
+      ],
+      "rules": [
+        "BR-13",
+        "BR-14",
+        "BR-15"
+      ]
+    },
+    {
+      "id": "UC-07",
+      "name": "Menindaklanjuti temuan",
+      "actors": [
+        "ACT-01",
+        "ACT-02",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-24",
+        "FR-25",
+        "FR-26"
+      ],
+      "screens": [
+        "SCR-12",
+        "SCR-07",
+        "SCR-08"
+      ],
+      "apis": [
+        "API-23",
+        "API-24"
+      ],
+      "entities": [
+        "ENT-07",
+        "ENT-08",
+        "ENT-09",
+        "ENT-12"
+      ],
+      "rules": [
+        "BR-16",
+        "BR-17",
+        "BR-15",
+        "BR-33"
+      ]
+    },
+    {
+      "id": "UC-08",
+      "name": "Memantau dashboard",
+      "actors": [
+        "ACT-01",
+        "ACT-02",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-27",
+        "FR-28",
+        "FR-29",
+        "FR-44"
+      ],
+      "screens": [
+        "SCR-03"
+      ],
+      "apis": [
+        "API-25"
+      ],
+      "entities": [
+        "ENT-03",
+        "ENT-06",
+        "ENT-07"
+      ],
+      "rules": [
+        "BR-15",
+        "BR-18",
+        "BR-26"
+      ]
+    },
+    {
+      "id": "UC-09",
+      "name": "Melihat riwayat dan detail P2H",
+      "actors": [
+        "ACT-01",
+        "ACT-02",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-30",
+        "FR-44"
+      ],
+      "screens": [
+        "SCR-10",
+        "SCR-07",
+        "SCR-13"
+      ],
+      "apis": [
+        "API-14",
+        "API-15",
+        "API-43"
+      ],
+      "entities": [
+        "ENT-06",
+        "ENT-07",
+        "ENT-08"
+      ],
+      "rules": [
+        "BR-15"
+      ]
+    },
+    {
+      "id": "UC-10",
+      "name": "Melihat rekap dan mengunduh dokumen",
+      "actors": [
+        "ACT-01",
+        "ACT-02",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-31",
+        "FR-32",
+        "FR-33"
+      ],
+      "screens": [
+        "SCR-11",
+        "SCR-10",
+        "SCR-07"
+      ],
+      "apis": [
+        "API-44",
+        "API-45",
+        "API-04"
+      ],
+      "entities": [
+        "ENT-06",
+        "ENT-07",
+        "ENT-08"
+      ],
+      "rules": [
+        "BR-15",
+        "BR-28",
+        "BR-29",
+        "BR-30"
+      ]
+    },
+    {
+      "id": "UC-11",
+      "name": "Mengelola unit genset",
+      "actors": [
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-34",
+        "FR-35",
+        "FR-28"
+      ],
+      "screens": [
+        "SCR-13",
+        "SCR-14"
+      ],
+      "apis": [
+        "API-10",
+        "API-11",
+        "API-12",
+        "API-13"
+      ],
+      "entities": [
+        "ENT-03",
+        "ENT-12"
+      ],
+      "rules": [
+        "BR-18",
+        "BR-24"
+      ]
+    },
+    {
+      "id": "UC-12",
+      "name": "Mengelola akun pengguna",
+      "actors": [
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-36",
+        "FR-38",
+        "FR-04"
+      ],
+      "screens": [
+        "SCR-17",
+        "SCR-18",
+        "SCR-20"
+      ],
+      "apis": [
+        "API-26",
+        "API-27",
+        "API-28",
+        "API-29"
+      ],
+      "entities": [
+        "ENT-02",
+        "ENT-01",
+        "ENT-12"
+      ],
+      "rules": [
+        "BR-19",
+        "BR-20",
+        "BR-21",
+        "BR-22"
+      ]
+    },
+    {
+      "id": "UC-13",
+      "name": "Mengimpor akun dari Excel",
+      "actors": [
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-37"
+      ],
+      "screens": [
+        "SCR-17",
+        "SCR-19",
+        "SCR-20"
+      ],
+      "apis": [
+        "API-30"
+      ],
+      "entities": [
+        "ENT-02",
+        "ENT-12"
+      ],
+      "rules": [
+        "BR-19",
+        "BR-20",
+        "BR-25"
+      ]
+    },
+    {
+      "id": "UC-14",
+      "name": "Mengelola daftar cek dan pengaturan",
+      "actors": [
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-39",
+        "FR-40"
+      ],
+      "screens": [
+        "SCR-21",
+        "SCR-22"
+      ],
+      "apis": [
+        "API-31",
+        "API-32",
+        "API-33",
+        "API-34",
+        "API-35",
+        "API-36",
+        "API-37"
+      ],
+      "entities": [
+        "ENT-04",
+        "ENT-05",
+        "ENT-11",
+        "ENT-12"
+      ],
+      "rules": [
+        "BR-26",
+        "BR-27"
+      ]
+    },
+    {
+      "id": "UC-15",
+      "name": "Mengaktifkan notifikasi HP dan memilih preferensi",
+      "actors": [
+        "ACT-01",
+        "ACT-02",
+        "ACT-03",
+        "ACT-04"
+      ],
+      "frs": [
+        "FR-06",
+        "FR-41",
+        "FR-42"
+      ],
+      "screens": [
+        "SCR-16",
+        "SCR-15"
+      ],
+      "apis": [
+        "API-03",
+        "API-08",
+        "API-38",
+        "API-39",
+        "API-40",
+        "API-41",
+        "API-42"
+      ],
+      "entities": [
+        "ENT-09",
+        "ENT-10",
+        "ENT-02"
+      ],
+      "rules": [
+        "BR-31"
+      ]
+    },
+    {
+      "id": "UC-16",
+      "name": "Menyimpan tanda tangan saya",
+      "actors": [
+        "ACT-01",
+        "ACT-02",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-05"
+      ],
+      "screens": [
+        "SCR-16"
+      ],
+      "apis": [
+        "API-07"
+      ],
+      "entities": [
+        "ENT-02"
+      ],
+      "rules": [
+        "BR-10"
+      ]
+    },
+    {
+      "id": "UC-17",
+      "name": "Memasang aplikasi di HP",
+      "actors": [
+        "ACT-01",
+        "ACT-02",
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-43"
+      ],
+      "screens": [
+        "SCR-16"
+      ],
+      "apis": [
+        "API-46"
+      ],
+      "entities": [
+        "ENT-14",
+        "ENT-17"
+      ],
+      "rules": []
+    },
+    {
+      "id": "UC-18",
+      "name": "Menghapus P2H atau membatalkan verifikasi",
+      "actors": [
+        "ACT-03"
+      ],
+      "frs": [
+        "FR-20",
+        "FR-23"
+      ],
+      "screens": [
+        "SCR-07"
+      ],
+      "apis": [
+        "API-20",
+        "API-21",
+        "API-22"
+      ],
+      "entities": [
+        "ENT-06",
+        "ENT-07",
+        "ENT-08",
+        "ENT-12"
+      ],
+      "rules": [
+        "BR-14"
+      ]
+    },
+    {
+      "id": "UC-19",
+      "name": "Memeriksa kesehatan layanan dan menyiapkan database otomatis",
+      "actors": [
+        "ACT-06",
+        "ACT-05"
+      ],
+      "frs": [
+        "FR-45"
+      ],
+      "screens": [],
+      "apis": [
+        "API-01"
+      ],
+      "entities": [
+        "ENT-13",
+        "ENT-01",
+        "ENT-04",
+        "ENT-05",
+        "ENT-03",
+        "ENT-11",
+        "ENT-02",
+        "ENT-16"
+      ],
+      "rules": []
+    }
+  ],
+  "screens": [
+    {
+      "id": "SCR-01",
+      "name": "Masuk",
+      "route": "/login",
+      "roles": [
+        "Publik (sebelum masuk)"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Login.tsx]"
+    },
+    {
+      "id": "SCR-02",
+      "name": "Wajib ganti password",
+      "route": "(otomatis setelah masuk bila must_change_password)",
+      "roles": [
+        "Semua peran"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Account.tsx:458-477]"
+    },
+    {
+      "id": "SCR-03",
+      "name": "Beranda (Dashboard)",
+      "route": "/",
+      "roles": [
+        "Teknisi",
+        "Pengawas",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Dashboard.tsx]"
+    },
+    {
+      "id": "SCR-04",
+      "name": "P2H baru",
+      "route": "/p2h/baru",
+      "roles": [
+        "Teknisi",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/P2HForm.tsx:74-94, 459-781]"
+    },
+    {
+      "id": "SCR-05",
+      "name": "Konfirmasi terkirim / tersimpan di HP",
+      "route": "/p2h/baru (layar hasil)",
+      "roles": [
+        "Teknisi",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/P2HForm.tsx:962-1034]"
+    },
+    {
+      "id": "SCR-06",
+      "name": "Ubah P2H",
+      "route": "/p2h/:id/ubah",
+      "roles": [
+        "Teknisi (pembuat)",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/P2HForm.tsx:100-116, 1040-1063]"
+    },
+    {
+      "id": "SCR-07",
+      "name": "Detail P2H",
+      "route": "/p2h/:id",
+      "roles": [
+        "Teknisi",
+        "Pengawas",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/P2HDetail.tsx:14-321]"
+    },
+    {
+      "id": "SCR-08",
+      "name": "Lembar Tindak lanjut temuan",
+      "route": "(lembar di SCR-07 dan SCR-12)",
+      "roles": [
+        "Teknisi",
+        "Pengawas",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/P2HDetail.tsx:340-422]"
+    },
+    {
+      "id": "SCR-09",
+      "name": "Lembar Verifikasi pengawas",
+      "route": "(lembar di SCR-07)",
+      "roles": [
+        "Pengawas",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/P2HDetail.tsx:424-501]"
+    },
+    {
+      "id": "SCR-10",
+      "name": "Riwayat P2H",
+      "route": "/p2h",
+      "roles": [
+        "Teknisi",
+        "Pengawas",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/History.tsx]"
+    },
+    {
+      "id": "SCR-11",
+      "name": "Rekap P2H",
+      "route": "/rekap",
+      "roles": [
+        "Teknisi",
+        "Pengawas",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Rekap.tsx]"
+    },
+    {
+      "id": "SCR-12",
+      "name": "Temuan",
+      "route": "/temuan",
+      "roles": [
+        "Teknisi",
+        "Pengawas",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Findings.tsx]"
+    },
+    {
+      "id": "SCR-13",
+      "name": "Unit genset",
+      "route": "/unit",
+      "roles": [
+        "Teknisi",
+        "Pengawas",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Units.tsx:13-210]"
+    },
+    {
+      "id": "SCR-14",
+      "name": "Lembar Tambah / Ubah unit genset",
+      "route": "(lembar di SCR-13)",
+      "roles": [
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Units.tsx:217-357]"
+    },
+    {
+      "id": "SCR-15",
+      "name": "Pemberitahuan",
+      "route": "/notifikasi",
+      "roles": [
+        "Teknisi",
+        "Pengawas",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Notifications.tsx]"
+    },
+    {
+      "id": "SCR-16",
+      "name": "Akun saya",
+      "route": "/akun",
+      "roles": [
+        "Teknisi",
+        "Pengawas",
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Account.tsx]"
+    },
+    {
+      "id": "SCR-17",
+      "name": "Pengguna",
+      "route": "/admin/pengguna",
+      "roles": [
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Admin.tsx:27-123]"
+    },
+    {
+      "id": "SCR-18",
+      "name": "Lembar Tambah / Ubah pengguna",
+      "route": "(lembar di SCR-17)",
+      "roles": [
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Admin.tsx:177-347]"
+    },
+    {
+      "id": "SCR-19",
+      "name": "Lembar Impor akun dari Excel",
+      "route": "(lembar di SCR-17)",
+      "roles": [
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Admin.tsx:371-467]"
+    },
+    {
+      "id": "SCR-20",
+      "name": "Lembar Password awal",
+      "route": "(lembar di SCR-17)",
+      "roles": [
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Admin.tsx:125-175]"
+    },
+    {
+      "id": "SCR-21",
+      "name": "Daftar cek",
+      "route": "/admin/daftar-cek",
+      "roles": [
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Admin.tsx:473-599]"
+    },
+    {
+      "id": "SCR-22",
+      "name": "Pengaturan",
+      "route": "/admin/pengaturan",
+      "roles": [
+        "Admin"
+      ],
+      "evidence": "[KODE: frontend/src/pages/Admin.tsx:605-707]"
+    }
+  ],
+  "rules": [
+    {
+      "id": "BR-01",
+      "statement": "Kondisi tiap butir hanya Baik, Rusak, atau Perbaiki; semua butir cek aktif wajib terisi, tanpa ganda.",
+      "enforced_at": "FE+BE+DB",
+      "evidence": "[KODE: backend/src/routes/p2h.js:22-24, 99-130] [KODE: backend/sql/001_init.sql:140]"
+    },
+    {
+      "id": "BR-02",
+      "statement": "Butir Rusak atau Perbaiki wajib punya catatan minimal 3 karakter (maks. 500).",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:111-114] [KODE: frontend/src/pages/P2HForm.tsx:312]"
+    },
+    {
+      "id": "BR-03",
+      "statement": "Butir Rusak atau Perbaiki wajib minimal 1 foto dan maksimal 3 foto per butir.",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:115-123] [KODE: backend/src/middleware/validate.js:56] [KODE: frontend/src/pages/P2HForm.tsx:313]"
+    },
+    {
+      "id": "BR-04",
+      "statement": "Foto harus JPEG atau PNG asli (dicek isi berkas), maks. 1.200.000 byte per foto, maks. 12.000.000 byte foto baru per kiriman; isi JSON P2H maks. 16 MB (lainnya 1 MB).",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/middleware/validate.js:55-72] [KODE: backend/src/routes/p2h.js:18, 128] [KODE: backend/src/app.js:70-72]"
+    },
+    {
+      "id": "BR-05",
+      "statement": "Hasil P2H dihitung server: STOP OPERASI (AA) bila ada butir kode AA Rusak/Perbaiki; Ada temuan (A) bila hanya kode A; selain itu Semua baik.",
+      "enforced_at": "BE+DB",
+      "evidence": "[KODE: backend/src/routes/p2h.js:134-144] [KODE: backend/sql/001_init.sql:110]"
+    },
+    {
+      "id": "BR-06",
+      "statement": "Satu P2H per kombinasi unit, tanggal shift, dan shift; kiriman ulang dengan client_uuid yang sama dibalas tanpa membuat data baru.",
+      "enforced_at": "BE+DB",
+      "evidence": "[KODE: backend/sql/001_init.sql:89, 122] [KODE: backend/src/routes/p2h.js:381-384, 426-438]"
+    },
+    {
+      "id": "BR-07",
+      "statement": "Tanggal shift tidak boleh di masa depan (WITA) dan tidak lebih dari 7 hari ke belakang.",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:58-66] [KODE: frontend/src/pages/P2HForm.tsx:582-583]"
+    },
+    {
+      "id": "BR-08",
+      "statement": "HM akhir tidak boleh lebih kecil dari HM awal; HM antara 0 dan 9.999.999.",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:68-75] [KODE: frontend/src/pages/P2HForm.tsx:299-303]"
+    },
+    {
+      "id": "BR-09",
+      "statement": "Parameter panel dibatasi: Temperature Radiator 0-200 C; Oil Pressure 0-300 psi; RPM 0-4000; Load 0-5000 kW; Voltage L-L 0-20000 VAC; Voltage Battery 0-60 VDC.",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/params.js:2-9] [KODE: frontend/src/pages/P2HForm.tsx:317-324]"
+    },
+    {
+      "id": "BR-10",
+      "statement": "Tanda tangan teknisi wajib bila pengaturan require_signature aktif (bawaan aktif); harus PNG data URL maks. 250.000 karakter.",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:400-405] [KODE: backend/src/middleware/validate.js:75-79] [KODE: backend/src/services/settings.js:3-8]"
+    },
+    {
+      "id": "BR-11",
+      "statement": "Unit berstatus Tidak aktif tidak dapat di-P2H; teknisi hanya dapat mengisi unit di site-nya.",
+      "enforced_at": "BE (FE menyembunyikan)",
+      "evidence": "[KODE: backend/src/routes/p2h.js:394-395] [KODE: frontend/src/pages/P2HForm.tsx:890]"
+    },
+    {
+      "id": "BR-12",
+      "statement": "Hanya pembuat P2H atau admin yang boleh mengubah P2H, dan teknisi hanya sebelum terverifikasi.",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:286-295, 478-483]"
+    },
+    {
+      "id": "BR-13",
+      "statement": "Verifikasi hanya oleh pengawas atau admin di site yang sama, hanya sekali, dan pengawas tidak boleh memverifikasi P2H yang ia isi sendiri.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:575-602]"
+    },
+    {
+      "id": "BR-14",
+      "statement": "Hanya admin yang boleh membatalkan verifikasi atau menghapus P2H.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:615-626]"
+    },
+    {
+      "id": "BR-15",
+      "statement": "Teknisi dan pengawas hanya melihat dan mengubah data site-nya; akun tanpa site tidak melihat apa pun; admin melihat semua.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/middleware/auth.js:42-46] [KODE: backend/tests/api.test.js:194-211, 354-378]"
+    },
+    {
+      "id": "BR-16",
+      "statement": "Temuan kode A harus diperbaiki dalam batas jam (bawaan 12 jam sejak laporan pertama); temuan kode AA berarti STOP OPERASI. Sistem hanya menampilkan dan memberi tahu; sistem TIDAK memblokir pengoperasian unit.",
+      "enforced_at": "BE (informasi saja)",
+      "evidence": "[KODE: backend/src/routes/findings.js:106-116] [KODE: backend/src/services/settings.js:3-8]"
+    },
+    {
+      "id": "BR-17",
+      "statement": "Menutup temuan wajib catatan minimal 3 huruf; satu tindak lanjut berlaku untuk semua laporan temuan terbuka yang sama (unit dan butir sama).",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/routes/findings.js:130-157] [KODE: frontend/src/pages/P2HDetail.tsx:374]"
+    },
+    {
+      "id": "BR-18",
+      "statement": "Hanya unit berstatus Jalan atau Standby yang wajib P2H dan dihitung dalam kepatuhan; Breakdown tidak dihitung; Tidak aktif disembunyikan kecuali pernah punya P2H.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/routes/dashboard.js:15-25, 53] [KODE: backend/src/services/export/rekap.js:27] [USER: keputusan 17 Okt 2026]"
+    },
+    {
+      "id": "BR-19",
+      "statement": "No SID unik tanpa memandang huruf besar-kecil, 2-40 karakter dari huruf, angka, titik, garis bawah, atau strip.",
+      "enforced_at": "BE+DB",
+      "evidence": "[KODE: backend/src/routes/users.js:38] [KODE: backend/sql/001_init.sql:39]"
+    },
+    {
+      "id": "BR-20",
+      "statement": "Teknisi dan pengawas wajib punya site aktif; admin tidak punya site.",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/routes/users.js:20-26, 58] [KODE: frontend/src/pages/Admin.tsx:211-215]"
+    },
+    {
+      "id": "BR-21",
+      "statement": "Password minimal 6 karakter (ganti dan impor), password awal acak 8 karakter dan wajib diganti saat masuk pertama; password admin awal dari variabel lingkungan minimal 8 karakter.",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/routes/auth.js:48-51] [KODE: backend/src/routes/users.js:16-18, 53, 160] [KODE: backend/src/bootstrap.js:110-113]"
+    },
+    {
+      "id": "BR-22",
+      "statement": "Admin tidak boleh menonaktifkan atau menurunkan akunnya sendiri.",
+      "enforced_at": "FE+BE",
+      "evidence": "[KODE: backend/src/routes/users.js:78-80] [KODE: frontend/src/pages/Admin.tsx:294, 329]"
+    },
+    {
+      "id": "BR-23",
+      "statement": "Percobaan masuk dibatasi 15 per menit per alamat IP; semua permintaan API dibatasi 900 per menit per IP (kecuali /api/health).",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/routes/auth.js:12-18] [KODE: backend/src/app.js:75]"
+    },
+    {
+      "id": "BR-24",
+      "statement": "Unit yang sudah punya riwayat P2H tidak dapat dihapus (ubah status menjadi Tidak aktif).",
+      "enforced_at": "BE+DB",
+      "evidence": "[KODE: backend/src/routes/units.js:108-118] [KODE: backend/sql/001_init.sql:90]"
+    },
+    {
+      "id": "BR-25",
+      "statement": "Impor akun maksimal 500 baris per kiriman; baris yang benar dibuat meski baris lain gagal.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/routes/users.js:115-130, 141-170]"
+    },
+    {
+      "id": "BR-26",
+      "statement": "Shift I berjalan dari jam mulai Shift I sampai sebelum jam mulai Shift II; Shift II sampai Shift I berikutnya (lewat tengah malam dihitung tanggal kemarin); jam mulai Shift I harus lebih awal dari Shift II; waktu memakai WITA.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/time.js:40-51] [KODE: backend/src/routes/admin.js:32-34] [KODE: backend/src/config.js:63]"
+    },
+    {
+      "id": "BR-27",
+      "statement": "Teks butir cek, bagian, dan data unit disalin ke P2H saat dibuat, sehingga perubahan daftar cek atau unit tidak mengubah arsip.",
+      "enforced_at": "BE+DB (desain)",
+      "evidence": "[KODE: backend/sql/001_init.sql:97-98, 128]"
+    },
+    {
+      "id": "BR-28",
+      "statement": "Kepatuhan (perkiraan) = jumlah P2H masuk dibagi (jumlah unit Jalan/Standby saat ini kali jumlah shift yang sudah mulai), maksimal 100%.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/services/export/rekap.js:25-54, 210]"
+    },
+    {
+      "id": "BR-29",
+      "statement": "Rekap PDF dan Word dibatasi 3000 P2H dan 600 temuan; rekap tahunan PDF dan Word tidak memuat rincian per P2H; Excel dibatasi 20000 baris.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/services/export/rekap.js:18-21, 125]"
+    },
+    {
+      "id": "BR-30",
+      "statement": "Tautan unduhan memakai tiket bertanda tangan berlaku 3 menit dan diperiksa ulang terhadap akun aktif dan hak site.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/routes/exports.js:36-45, 52-74]"
+    },
+    {
+      "id": "BR-31",
+      "statement": "Pemberitahuan: pembuat peristiwa tidak dikirimi push; mode Hanya temuan hanya menerima STOP, temuan, dan selesai diperbaiki; non-admin hanya menerima dari site-nya; admin sesuai site yang diikuti.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/routes/notifications.js:18-20] [KODE: backend/src/services/push.js:38-47]"
+    },
+    {
+      "id": "BR-32",
+      "statement": "Token sesi berlaku 30 hari (bawaan) dan tidak berlaku bila akun nonaktif atau token_version berubah.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/config.js:45] [KODE: backend/src/middleware/auth.js:14-33]"
+    },
+    {
+      "id": "BR-33",
+      "statement": "Tindak lanjut (fix_status) hanya ada untuk butir Rusak/Perbaiki; butir Baik tidak boleh punya status tindak lanjut.",
+      "enforced_at": "DB",
+      "evidence": "[KODE: backend/sql/001_init.sql:149-151]"
+    },
+    {
+      "id": "BR-34",
+      "statement": "Saat P2H diubah: butir menjadi Baik menghapus tindak lanjut dan fotonya; Baik menjadi Rusak/Perbaiki membuka tindak lanjut dengan status Belum diperbaiki; foto lama yang tidak dipertahankan dihapus.",
+      "enforced_at": "BE",
+      "evidence": "[KODE: backend/src/routes/p2h.js:494-513]"
+    },
+    {
+      "id": "BR-35",
+      "statement": "Draf form disimpan di HP selama kurang dari 20 jam dan dipulihkan hanya bila cocok dengan unit yang dipilih.",
+      "enforced_at": "FE saja",
+      "evidence": "[KODE: frontend/src/pages/P2HForm.tsx:152-157]"
+    }
+  ],
+  "entities": [
+    {
+      "id": "ENT-01",
+      "name": "sites",
+      "store": "PostgreSQL",
+      "fields_count": 6,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-02",
+      "name": "users",
+      "store": "PostgreSQL",
+      "fields_count": 19,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-03",
+      "name": "units",
+      "store": "PostgreSQL",
+      "fields_count": 19,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-04",
+      "name": "checklist_sections",
+      "store": "PostgreSQL",
+      "fields_count": 4,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-05",
+      "name": "checklist_items",
+      "store": "PostgreSQL",
+      "fields_count": 9,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-06",
+      "name": "p2h_forms",
+      "store": "PostgreSQL",
+      "fields_count": 35,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-07",
+      "name": "p2h_answers",
+      "store": "PostgreSQL",
+      "fields_count": 17,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-08",
+      "name": "p2h_photos",
+      "store": "PostgreSQL",
+      "fields_count": 8,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-09",
+      "name": "notifications",
+      "store": "PostgreSQL",
+      "fields_count": 10,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-10",
+      "name": "push_subscriptions",
+      "store": "PostgreSQL",
+      "fields_count": 9,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-11",
+      "name": "settings",
+      "store": "PostgreSQL",
+      "fields_count": 3,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-12",
+      "name": "audit_log",
+      "store": "PostgreSQL",
+      "fields_count": 8,
+      "schema_source": "migration",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-13",
+      "name": "schema_migrations",
+      "store": "PostgreSQL",
+      "fields_count": 2,
+      "schema_source": "inferred",
+      "rls_or_rules": "off"
+    },
+    {
+      "id": "ENT-14",
+      "name": "localStorage peramban (p2h.token, p2h.user, p2h.draft.v2.<id>, p2h.snap.*, p2h.theme)",
+      "store": "Browser localStorage",
+      "fields_count": 0,
+      "schema_source": "inferred",
+      "rls_or_rules": "n/a"
+    },
+    {
+      "id": "ENT-15",
+      "name": "IndexedDB peramban (p2h-genset/outbox, p2h-genset-draft/photos)",
+      "store": "Browser IndexedDB",
+      "fields_count": 0,
+      "schema_source": "inferred",
+      "rls_or_rules": "n/a"
+    },
+    {
+      "id": "ENT-16",
+      "name": "Berkas seed (units.json, checklist.json) dan konstanta SITES",
+      "store": "Berkas di repository",
+      "fields_count": 0,
+      "schema_source": "inferred",
+      "rls_or_rules": "n/a"
+    },
+    {
+      "id": "ENT-17",
+      "name": "CacheStorage service worker (precache aset aplikasi)",
+      "store": "Browser CacheStorage",
+      "fields_count": 0,
+      "schema_source": "inferred",
+      "rls_or_rules": "n/a"
+    }
+  ],
+  "apis": [
+    {
+      "id": "API-01",
+      "method": "GET",
+      "path": "/api/health",
+      "auth_required": false,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/app.js:87-103]"
+    },
+    {
+      "id": "API-02",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "auth_required": false,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/auth.js:32-41]"
+    },
+    {
+      "id": "API-03",
+      "method": "GET",
+      "path": "/api/notifications/push/public-key",
+      "auth_required": false,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/notifications.js:12-14]"
+    },
+    {
+      "id": "API-04",
+      "method": "GET",
+      "path": "/api/exports/file?t=<tiket>",
+      "auth_required": true,
+      "component": "CMP-06",
+      "evidence": "[KODE: backend/src/routes/exports.js:52-80]"
+    },
+    {
+      "id": "API-05",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/auth.js:43-46]"
+    },
+    {
+      "id": "API-06",
+      "method": "POST",
+      "path": "/api/auth/password",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/auth.js:53-71]"
+    },
+    {
+      "id": "API-07",
+      "method": "PUT",
+      "path": "/api/auth/signature",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/auth.js:73-78]"
+    },
+    {
+      "id": "API-08",
+      "method": "PUT",
+      "path": "/api/auth/prefs",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/auth.js:80-95]"
+    },
+    {
+      "id": "API-09",
+      "method": "GET",
+      "path": "/api/meta",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/meta.js:43-67]"
+    },
+    {
+      "id": "API-10",
+      "method": "GET",
+      "path": "/api/units",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/units.js:38-55]"
+    },
+    {
+      "id": "API-11",
+      "method": "POST",
+      "path": "/api/units",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/units.js:82-91]"
+    },
+    {
+      "id": "API-12",
+      "method": "PUT",
+      "path": "/api/units/:id",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/units.js:93-106]"
+    },
+    {
+      "id": "API-13",
+      "method": "DELETE",
+      "path": "/api/units/:id",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/units.js:108-118]"
+    },
+    {
+      "id": "API-14",
+      "method": "GET",
+      "path": "/api/p2h",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/p2h.js:340-354]"
+    },
+    {
+      "id": "API-15",
+      "method": "GET",
+      "path": "/api/p2h/:id",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/p2h.js:356-361]"
+    },
+    {
+      "id": "API-16",
+      "method": "POST",
+      "path": "/api/p2h",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/p2h.js:365-464]"
+    },
+    {
+      "id": "API-17",
+      "method": "PUT",
+      "path": "/api/p2h/:id",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/p2h.js:468-562]"
+    },
+    {
+      "id": "API-18",
+      "method": "POST",
+      "path": "/api/p2h/:id/verify",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/p2h.js:575-601]"
+    },
+    {
+      "id": "API-19",
+      "method": "POST",
+      "path": "/api/p2h/:id/sign",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/p2h.js:602]"
+    },
+    {
+      "id": "API-20",
+      "method": "DELETE",
+      "path": "/api/p2h/:id/verify",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/p2h.js:604-615]"
+    },
+    {
+      "id": "API-21",
+      "method": "DELETE",
+      "path": "/api/p2h/:id/sign",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/p2h.js:616]"
+    },
+    {
+      "id": "API-22",
+      "method": "DELETE",
+      "path": "/api/p2h/:id",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/p2h.js:620-626]"
+    },
+    {
+      "id": "API-23",
+      "method": "GET",
+      "path": "/api/findings",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/findings.js:62-118]"
+    },
+    {
+      "id": "API-24",
+      "method": "PATCH",
+      "path": "/api/findings/:id",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/findings.js:126-189]"
+    },
+    {
+      "id": "API-25",
+      "method": "GET",
+      "path": "/api/dashboard",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/dashboard.js:27-168]"
+    },
+    {
+      "id": "API-26",
+      "method": "GET",
+      "path": "/api/users",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/users.js:32-35]"
+    },
+    {
+      "id": "API-27",
+      "method": "POST",
+      "path": "/api/users",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/users.js:48-62]"
+    },
+    {
+      "id": "API-28",
+      "method": "PUT",
+      "path": "/api/users/:id",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/users.js:74-91]"
+    },
+    {
+      "id": "API-29",
+      "method": "POST",
+      "path": "/api/users/:id/reset-password",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/users.js:93-105]"
+    },
+    {
+      "id": "API-30",
+      "method": "POST",
+      "path": "/api/users/import",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/users.js:132-176]"
+    },
+    {
+      "id": "API-31",
+      "method": "GET",
+      "path": "/api/admin/settings",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/admin.js:26-28]"
+    },
+    {
+      "id": "API-32",
+      "method": "PUT",
+      "path": "/api/admin/settings",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/admin.js:30-38]"
+    },
+    {
+      "id": "API-33",
+      "method": "GET",
+      "path": "/api/admin/checklist",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/admin.js:42-44]"
+    },
+    {
+      "id": "API-34",
+      "method": "POST",
+      "path": "/api/admin/checklist/items",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/admin.js:60-74]"
+    },
+    {
+      "id": "API-35",
+      "method": "PUT",
+      "path": "/api/admin/checklist/items/:id",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/admin.js:76-91]"
+    },
+    {
+      "id": "API-36",
+      "method": "POST",
+      "path": "/api/admin/checklist/items/:id/move",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/admin.js:94-118]"
+    },
+    {
+      "id": "API-37",
+      "method": "GET",
+      "path": "/api/admin/audit",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/admin.js:122-128]"
+    },
+    {
+      "id": "API-38",
+      "method": "GET",
+      "path": "/api/notifications",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/notifications.js:22-41]"
+    },
+    {
+      "id": "API-39",
+      "method": "POST",
+      "path": "/api/notifications/seen",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/notifications.js:43-48]"
+    },
+    {
+      "id": "API-40",
+      "method": "POST",
+      "path": "/api/notifications/push/subscribe",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/notifications.js:57-68]"
+    },
+    {
+      "id": "API-41",
+      "method": "POST",
+      "path": "/api/notifications/push/unsubscribe",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/notifications.js:70-74]"
+    },
+    {
+      "id": "API-42",
+      "method": "POST",
+      "path": "/api/notifications/push/test",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/notifications.js:76-78]"
+    },
+    {
+      "id": "API-43",
+      "method": "GET",
+      "path": "/api/photos/:id",
+      "auth_required": true,
+      "component": "CMP-02",
+      "evidence": "[KODE: backend/src/routes/photos.js:13-28]"
+    },
+    {
+      "id": "API-44",
+      "method": "POST",
+      "path": "/api/exports/ticket",
+      "auth_required": true,
+      "component": "CMP-06",
+      "evidence": "[KODE: backend/src/routes/exports.js:36-45]"
+    },
+    {
+      "id": "API-45",
+      "method": "GET",
+      "path": "/api/exports/rekap-preview",
+      "auth_required": true,
+      "component": "CMP-06",
+      "evidence": "[KODE: backend/src/routes/exports.js:48-50] [KODE: backend/src/services/export/rekap.js:244-258]"
+    },
+    {
+      "id": "API-46",
+      "method": "GET",
+      "path": "/* (halaman aplikasi dan aset)",
+      "auth_required": false,
+      "component": "CMP-01",
+      "evidence": "[KODE: backend/src/app.js:127-154]"
+    }
+  ],
+  "components": [
+    {
+      "id": "CMP-01",
+      "name": "Aplikasi web (SPA / PWA)",
+      "type": "frontend",
+      "technology": "React ^19.1.0, react-router-dom ^7.6.0, TanStack Query ^5.80.0, Vite ^7.1.0, TypeScript ~5.9.3, idb-keyval ^6.2.1",
+      "hosting": "Dibangun saat build lalu disajikan oleh CMP-02 di Render [USER; README]",
+      "evidence": "[KODE: frontend/package.json:13-36]"
+    },
+    {
+      "id": "CMP-02",
+      "name": "Server API (Express)",
+      "type": "backend",
+      "technology": "Node.js >=20.12 dan <25, Express ^5.1.0, zod ^3.25.76, pg ^8.16.0, helmet ^8.1.0, express-rate-limit ^8.0.0, jsonwebtoken ^9.0.2, bcryptjs ^3.0.2, compression ^1.8.0, cors ^2.8.5",
+      "hosting": "Render Web Service paket gratis [USER; README]",
+      "evidence": "[KODE: backend/package.json:7-33]"
+    },
+    {
+      "id": "CMP-03",
+      "name": "Database PostgreSQL",
+      "type": "database",
+      "technology": "PostgreSQL (versi di Aiven TIDAK DITEMUKAN - TBC); versi PostgreSQL 17 untuk uji lokal (embedded-postgres 17.10.0-beta.17)",
+      "hosting": "Aiven for PostgreSQL paket gratis [USER; README]",
+      "evidence": "[KODE: backend/package.json:34-36] [KODE: README.md:65-69]"
+    },
+    {
+      "id": "CMP-04",
+      "name": "Service Worker",
+      "type": "function",
+      "technology": "Workbox (core, precaching, routing) ^7.3.0, vite-plugin-pwa ^1.0.0",
+      "hosting": "Berjalan di peramban pengguna",
+      "evidence": "[KODE: frontend/src/sw.ts]"
+    },
+    {
+      "id": "CMP-05",
+      "name": "Penyimpanan peramban",
+      "type": "storage",
+      "technology": "localStorage, IndexedDB (idb-keyval), CacheStorage",
+      "hosting": "Di HP / komputer pengguna",
+      "evidence": "[KODE: frontend/src/lib/cache.ts] [KODE: frontend/src/lib/outbox.ts]"
+    },
+    {
+      "id": "CMP-06",
+      "name": "Modul ekspor dokumen",
+      "type": "backend",
+      "technology": "pdfkit ^0.17.0, docx ^9.5.0, exceljs ^4.4.0",
+      "hosting": "Di dalam proses CMP-02",
+      "evidence": "[KODE: backend/src/services/export/]"
+    },
+    {
+      "id": "CMP-07",
+      "name": "Modul notifikasi Web Push",
+      "type": "backend",
+      "technology": "web-push ^3.6.7 (VAPID)",
+      "hosting": "Di dalam proses CMP-02",
+      "evidence": "[KODE: backend/src/services/push.js]"
+    },
+    {
+      "id": "CMP-08",
+      "name": "Penyiapan database (migrasi, seed, bootstrap)",
+      "type": "job",
+      "technology": "SQL berurutan, pg_advisory_lock, seed dari JSON",
+      "hosting": "Berjalan sekali saat CMP-02 hidup",
+      "evidence": "[KODE: backend/src/bootstrap.js] [KODE: backend/src/migrate.js]"
+    },
+    {
+      "id": "CMP-09",
+      "name": "Perkakas lokal Windows dan skrip bantu",
+      "type": "job",
+      "technology": "Batch (.bat), Node.js, embedded-postgres",
+      "hosting": "Komputer pengembang",
+      "evidence": "[KODE: README.md:17-26]"
+    },
+    {
+      "id": "CMP-10",
+      "name": "DBeaver (klien SQL)",
+      "type": "external",
+      "technology": "DBeaver (aplikasi desktop milik pengguna)",
+      "hosting": "Komputer pemilik aplikasi",
+      "evidence": "[KODE: README.md:111-113]"
+    }
+  ],
+  "integrations": [
+    {
+      "id": "INT-01",
+      "service": "Aiven for PostgreSQL",
+      "purpose": "Penyimpanan data aplikasi",
+      "data_sent_out": "Seluruh data: akun, P2H, foto, tanda tangan, pemberitahuan, catatan aktivitas",
+      "account_owner": "unknown"
+    },
+    {
+      "id": "INT-02",
+      "service": "Render (Web Service)",
+      "purpose": "Menjalankan CMP-02 dan menyajikan aplikasi web",
+      "data_sent_out": "Seluruh lalu lintas HTTP aplikasi; variabel lingkungan rahasia",
+      "account_owner": "unknown"
+    },
+    {
+      "id": "INT-03",
+      "service": "Layanan Web Push peramban (FCM, Apple, Mozilla)",
+      "purpose": "Mengirim notifikasi ke HP",
+      "data_sent_out": "Judul dan isi pemberitahuan (kode unit, nama site, nama pengisi), tautan, tag; endpoint dan kunci perangkat tersimpan di ENT-10",
+      "account_owner": "unknown"
+    },
+    {
+      "id": "INT-04",
+      "service": "GitHub (repository FrederikusReyner/P2H-Genset-FPM-BC)",
+      "purpose": "Sumber kode dan pemicu deploy Render",
+      "data_sent_out": "Seluruh kode sumber (tanpa .env)",
+      "account_owner": "personal"
+    },
+    {
+      "id": "INT-05",
+      "service": "Registry npm (build time)",
+      "purpose": "Mengunduh dependensi saat build di Render atau lokal",
+      "data_sent_out": "Tidak ada data aplikasi; hanya nama dan versi paket",
+      "account_owner": "unknown"
+    }
+  ],
+  "nfrs": [
+    {
+      "id": "NFR-01",
+      "category": "Availability",
+      "statement": "Layanan tersedia untuk pengguna lapangan selama jam kerja dua shift.",
+      "value": "TBC - pemilik bisnis (target ketersediaan dan lama henti yang dapat diterima)",
+      "how_measured": "Pemantauan uptime pada /api/health (belum ada alat pemantau)"
+    },
+    {
+      "id": "NFR-02",
+      "category": "Performance",
+      "statement": "Waktu respons layar dan unduhan dokumen dapat diterima pengguna di jaringan lapangan.",
+      "value": "TBC - pemilik bisnis (mis. p95 target dalam detik)",
+      "how_measured": "Belum diukur; perlu uji beban dan log durasi"
+    },
+    {
+      "id": "NFR-03",
+      "category": "Scalability",
+      "statement": "Sistem melayani seluruh pengguna lima site tanpa penurunan berarti.",
+      "value": "TBC - pemilik bisnis (jumlah pengguna serentak)",
+      "how_measured": "Uji beban (belum ada)"
+    },
+    {
+      "id": "NFR-04",
+      "category": "Security - authN",
+      "statement": "Autentikasi pengguna dengan password dan token sesi.",
+      "value": "Hash bcrypt (biaya 10); token JWT 30 hari; batas masuk 15 per menit per IP",
+      "how_measured": "Tinjauan kode"
+    },
+    {
+      "id": "NFR-05",
+      "category": "Security - authZ",
+      "statement": "Akses berdasarkan peran dan site.",
+      "value": "3 peran dan pembatasan site di sisi server",
+      "how_measured": "Uji otomatis API dan tinjauan kode"
+    },
+    {
+      "id": "NFR-06",
+      "category": "Security - transport dan header",
+      "statement": "Lalu lintas terenkripsi dan halaman web dilindungi kebijakan keamanan konten.",
+      "value": "HTTPS dari platform Render (TBC - konfirmasi domain); TLS ke database; CSP ketat",
+      "how_measured": "Tinjauan konfigurasi"
+    },
+    {
+      "id": "NFR-07",
+      "category": "Observability",
+      "statement": "Kejadian penting dan galat dapat ditelusuri.",
+      "value": "TBC - pemilik bisnis (kebutuhan monitoring dan alert)",
+      "how_measured": "Log Render, tabel audit_log, kueri DBeaver"
+    },
+    {
+      "id": "NFR-08",
+      "category": "Backup dan pemulihan",
+      "statement": "Data P2H dapat dipulihkan bila terjadi kehilangan.",
+      "value": "TBC - pemilik bisnis (RPO dan RTO)",
+      "how_measured": "Uji pemulihan (belum ada)"
+    },
+    {
+      "id": "NFR-09",
+      "category": "Kapasitas data",
+      "statement": "Penyimpanan cukup untuk P2H dan foto.",
+      "value": "Perkiraan penulis: sekitar 25 KB per P2H ditambah 150-300 KB per foto; sekitar 0,9 GB per tahun untuk 25 genset dua shift [KODE: README.md:131]",
+      "how_measured": "Query DBeaver nomor 12-14"
+    },
+    {
+      "id": "NFR-10",
+      "category": "Ketahanan tanpa sinyal",
+      "statement": "Teknisi tetap dapat mengisi P2H tanpa sinyal.",
+      "value": "Antrean di HP; percobaan kirim ulang tiap 30 detik; batas 8 galat server sebelum ditandai tidak bisa dikirim",
+      "how_measured": "Uji layar manual (37 pengecekan menurut README) [KODE: README.md:158]"
+    },
+    {
+      "id": "NFR-11",
+      "category": "Kompatibilitas",
+      "statement": "Berjalan di HP Android dan iPhone dan komputer.",
+      "value": "Android: Chrome; iPhone: Safari iOS 16.4 ke atas untuk notifikasi; server Node.js 20.12 ke atas dan di bawah 25",
+      "how_measured": "Uji perangkat (belum)"
+    },
+    {
+      "id": "NFR-12",
+      "category": "Zona waktu",
+      "statement": "Semua tanggal dan shift mengikuti WITA.",
+      "value": "Asia/Makassar",
+      "how_measured": "Tinjauan kode"
+    },
+    {
+      "id": "NFR-13",
+      "category": "Retensi data",
+      "statement": "Kebijakan berapa lama P2H, foto, dan log disimpan.",
+      "value": "TBC - pemilik bisnis dan kepatuhan",
+      "how_measured": "-"
+    },
+    {
+      "id": "NFR-14",
+      "category": "Testabilitas",
+      "statement": "Fungsi inti terjaga oleh uji otomatis.",
+      "value": "27 uji API otomatis [KODE: backend/tests/api.test.js]",
+      "how_measured": "npm test (memerlukan server dan database hidup)"
+    },
+    {
+      "id": "NFR-15",
+      "category": "Ukuran muatan",
+      "statement": "Foto dan data tidak membebani jaringan lapangan.",
+      "value": "Foto maksimal 1280 piksel sisi panjang, JPEG; batas server 1.200.000 byte per foto dan 12.000.000 byte per kiriman",
+      "how_measured": "Tinjauan kode"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "ADR-01",
+      "title": "Satu layanan Render menyajikan API dan tampilan web (tanpa Vercel, tanpa CORS)",
+      "status": "explicit",
+      "evidence": "[KODE: README.md:15, 120-122] [KODE: backend/src/app.js:127-154] [USER: 17 Okt 2026]"
+    },
+    {
+      "id": "ADR-02",
+      "title": "Database PostgreSQL di Aiven (paket gratis saat ini)",
+      "status": "explicit",
+      "evidence": "[USER: 17 dan 20 Okt 2026] [KODE: README.md:65-69]"
+    },
+    {
+      "id": "ADR-03",
+      "title": "Foto temuan disimpan di database (bytea), bukan penyimpanan objek",
+      "status": "explicit",
+      "evidence": "[KODE: backend/sql/002_revisi.sql:19-29] [KODE: README.md:131]"
+    },
+    {
+      "id": "ADR-04",
+      "title": "Sesi stateless: JWT 30 hari dengan token_version, disimpan di localStorage",
+      "status": "implicit",
+      "evidence": "[KODE: backend/src/middleware/auth.js:14-33] [KODE: frontend/src/lib/api.ts:5, 29-43]"
+    },
+    {
+      "id": "ADR-05",
+      "title": "Aplikasi PWA dengan antrean kirim offline di IndexedDB",
+      "status": "implicit",
+      "evidence": "[KODE: frontend/src/sw.ts] [KODE: frontend/src/lib/outbox.ts]"
+    },
+    {
+      "id": "ADR-06",
+      "title": "Migrasi SQL berurutan otomatis saat server hidup, dengan kunci advisory",
+      "status": "explicit",
+      "evidence": "[KODE: backend/src/migrate.js:9-48] [KODE: backend/sql/001_init.sql:1-6]"
+    },
+    {
+      "id": "ADR-07",
+      "title": "Denormalisasi: salinan data unit, pemeriksa, dan teks butir cek disimpan di P2H",
+      "status": "explicit",
+      "evidence": "[KODE: backend/sql/001_init.sql:97-98, 128]"
+    },
+    {
+      "id": "ADR-08",
+      "title": "Dokumen dibuat di server (pdfkit, docx, exceljs) dan diunduh lewat tiket 3 menit",
+      "status": "explicit",
+      "evidence": "[KODE: backend/src/routes/exports.js:32-35] [KODE: backend/src/services/export/]"
+    },
+    {
+      "id": "ADR-09",
+      "title": "Pembatasan data per site di lapisan aplikasi, tanpa Row Level Security",
+      "status": "implicit",
+      "evidence": "[KODE: backend/src/middleware/auth.js:42-46]"
+    },
+    {
+      "id": "ADR-10",
+      "title": "Akun pribadi per orang dibuat admin; login dengan No SID",
+      "status": "explicit",
+      "evidence": "[USER: pilihan awal] [KODE: backend/src/routes/users.js]"
+    },
+    {
+      "id": "ADR-11",
+      "title": "Notifikasi HP lewat Web Push standar (VAPID) tanpa layanan pihak ketiga khusus",
+      "status": "implicit",
+      "evidence": "[KODE: backend/src/services/push.js]"
+    },
+    {
+      "id": "ADR-12",
+      "title": "Zona waktu WITA ditetapkan tetap untuk semua hitungan tanggal dan shift",
+      "status": "explicit",
+      "evidence": "[KODE: backend/src/config.js:63]"
+    },
+    {
+      "id": "ADR-13",
+      "title": "Verifikasi pengawas berupa tanda tangan gambar, bukan tanda tangan elektronik tersertifikasi",
+      "status": "implicit",
+      "evidence": "[USER: revisi 17 Okt 2026] [KODE: backend/src/routes/p2h.js:592-596]"
+    },
+    {
+      "id": "ADR-14",
+      "title": "Tanpa Docker, CI/CD, dan uji otomatis frontend; deploy lewat Render dari GitHub",
+      "status": "implicit",
+      "evidence": "[KODE: README.md:71-83] [KODE: pencarian Dockerfile tidak menemukan apa pun]"
+    },
+    {
+      "id": "ADR-15",
+      "title": "Kebijakan keamanan konten (CSP) ketat dan cache aset berumur panjang",
+      "status": "implicit",
+      "evidence": "[KODE: backend/src/app.js:30-51, 130-141]"
+    }
+  ],
+  "risks": [
+    {
+      "id": "RSK-01",
+      "type": "gap",
+      "severity": "high",
+      "statement": "Tidak ada skrip atau prosedur cadangan dan pemulihan data; bergantung pada fitur penyedia database."
+    },
+    {
+      "id": "RSK-02",
+      "type": "risk",
+      "severity": "high",
+      "statement": "Hosting (Render, Aiven) dan repository GitHub memakai akun pribadi dan paket gratis yang tidak ditujukan untuk produksi [USER]; data operasional perusahaan berada di luar kendali IT."
+    },
+    {
+      "id": "RSK-03",
+      "type": "risk",
+      "severity": "medium",
+      "statement": "Kapasitas disk gratis Aiven 1 GB diperkirakan habis sekitar satu tahun karena foto disimpan di database."
+    },
+    {
+      "id": "RSK-04",
+      "type": "security",
+      "severity": "medium",
+      "statement": "Token sesi (30 hari) disimpan di localStorage dan keluar akun tidak mencabutnya di server."
+    },
+    {
+      "id": "RSK-05",
+      "type": "security",
+      "severity": "medium",
+      "statement": "Antrean kirim offline di IndexedDB tidak terikat ke pengguna dan tidak dibersihkan saat keluar akun; P2H antrean dikirim memakai token pengguna yang sedang masuk."
+    },
+    {
+      "id": "RSK-06",
+      "type": "gap",
+      "severity": "medium",
+      "statement": "Sistem tidak menegakkan STOP OPERASI: unit berkode AA hanya ditandai dan diberitahukan; tidak ada blokir atau persetujuan sebelum unit dijalankan."
+    },
+    {
+      "id": "RSK-07",
+      "type": "security",
+      "severity": "low",
+      "statement": "Tiket unduhan (JWT 3 menit) dibawa di query string URL sehingga dapat terekam log proxy dan riwayat peramban."
+    },
+    {
+      "id": "RSK-08",
+      "type": "security",
+      "severity": "medium",
+      "statement": "Nilai contoh JWT_SECRET di .env.example panjangnya 56 karakter sehingga lolos pemeriksaan panjang minimal 32 di produksi; bila dipakai apa adanya, token dapat dipalsukan."
+    },
+    {
+      "id": "RSK-09",
+      "type": "security",
+      "severity": "medium",
+      "statement": "Tidak ada aturan kekuatan password (minimal 6 karakter) dan tidak ada penguncian akun; satu-satunya pelindung adalah batas 15 percobaan per menit per IP."
+    },
+    {
+      "id": "RSK-10",
+      "type": "security",
+      "severity": "low",
+      "statement": "Sertifikat server database tidak diperiksa bila DATABASE_CA kosong (rejectUnauthorized false)."
+    },
+    {
+      "id": "RSK-11",
+      "type": "security",
+      "severity": "medium",
+      "statement": "Data pribadi (nama, No SID, perusahaan, No. HP), gambar tanda tangan, dan foto disimpan tanpa enkripsi tingkat aplikasi dan tanpa kebijakan retensi."
+    },
+    {
+      "id": "RSK-12",
+      "type": "gap",
+      "severity": "medium",
+      "statement": "Tidak ada monitoring, alert, atau pelacakan galat selain log konsol dan audit_log."
+    },
+    {
+      "id": "RSK-13",
+      "type": "debt",
+      "severity": "low",
+      "statement": "Dependensi: README melaporkan 2 kerentanan tingkat sedang dari paket Excel; tidak diverifikasi ulang dalam penyusunan dokumen ini."
+    },
+    {
+      "id": "RSK-14",
+      "type": "debt",
+      "severity": "low",
+      "statement": "Istilah lama tersisa: label \"Tanda tangan mekanik\" di Pengaturan dan nama berkas fixture signature-mekanik, padahal peran kini Teknisi."
+    },
+    {
+      "id": "RSK-15",
+      "type": "debt",
+      "severity": "low",
+      "statement": "Tabel p2h_photos mengizinkan image/webp pada CHECK, tetapi aplikasi hanya menerima JPEG dan PNG."
+    },
+    {
+      "id": "RSK-16",
+      "type": "debt",
+      "severity": "low",
+      "statement": "Repository GitHub (commit dadd318) melacak berkas contoh hasil ekspor (backend/tests/out/*) dan frontend/vercel.json yang sudah tidak dipakai (vercel.json sudah dihapus di folder kerja)."
+    },
+    {
+      "id": "RSK-17",
+      "type": "debt",
+      "severity": "low",
+      "statement": "Berkas ca.pem (sertifikat CA publik, tidak berisi kunci privat) berada di akar folder proyek dan tidak dikecualikan oleh .gitignore."
+    },
+    {
+      "id": "RSK-18",
+      "type": "gap",
+      "severity": "medium",
+      "statement": "Tidak ada CI/CD, Dockerfile, uji otomatis frontend, atau uji layar otomatis; uji API dijalankan manual dan membutuhkan server hidup."
+    },
+    {
+      "id": "RSK-19",
+      "type": "gap",
+      "severity": "medium",
+      "statement": "Data unit (25 genset) disalin sekali dari PMMR ke berkas seed; tidak ada sinkronisasi berkala dan status Breakdown adalah potret 2 Okt 2026."
+    },
+    {
+      "id": "RSK-20",
+      "type": "debt",
+      "severity": "low",
+      "statement": "Kepatuhan (perkiraan) memakai jumlah unit Jalan/Standby saat ini, bukan jumlah pada tanggal rekap, sehingga rekap lampau dapat menyimpang."
+    },
+    {
+      "id": "RSK-21",
+      "type": "risk",
+      "severity": "low",
+      "statement": "Penghapusan P2H oleh admin permanen (jawaban dan foto ikut terhapus) tanpa penghapusan lunak; hanya audit_log yang mencatat."
+    },
+    {
+      "id": "RSK-22",
+      "type": "gap",
+      "severity": "medium",
+      "statement": "URL aplikasi produksi dan region hosting yang sebenarnya TIDAK DITEMUKAN di berkas; status hosting hanya dari keterangan pengguna."
+    },
+    {
+      "id": "RSK-23",
+      "type": "debt",
+      "severity": "low",
+      "statement": "Teks 12 jam untuk temuan kode A tertulis tetap di beberapa tempat (pemberitahuan, dashboard, halaman Temuan, legenda form) dan tidak mengikuti pengaturan a_deadline_hours, sedangkan perhitungan batas waktu memakai pengaturan."
+    }
+  ],
+  "diagrams": [
+    {
+      "id": "FSD-G01",
+      "doc": "FSD",
+      "title": "Diagram use case (aktor dan use case)",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "FSD-G02",
+      "doc": "FSD",
+      "title": "Peta navigasi layar",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "FSD-G03",
+      "doc": "FSD",
+      "title": "Activity flow UC-03: mengisi P2H baru",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "FSD-G04",
+      "doc": "FSD",
+      "title": "Activity flow UC-04: kirim P2H saat tanpa sinyal",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "FSD-G05",
+      "doc": "FSD",
+      "title": "Activity flow UC-06: memverifikasi P2H",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "FSD-G06",
+      "doc": "FSD",
+      "title": "Activity flow UC-07: menindaklanjuti temuan",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "FSD-G07",
+      "doc": "FSD",
+      "title": "State P2H: status verifikasi",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "FSD-G08",
+      "doc": "FSD",
+      "title": "State temuan: status tindak lanjut",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G01",
+      "doc": "ADD",
+      "title": "System Context (C4 level 1)",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G02",
+      "doc": "ADD",
+      "title": "Container (C4 level 2)",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G03",
+      "doc": "ADD",
+      "title": "Component Server API (C4 level 3)",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G04",
+      "doc": "ADD",
+      "title": "Deployment as-is (topologi)",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G05",
+      "doc": "ADD",
+      "title": "Data flow dan lokasi data",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G06",
+      "doc": "ADD",
+      "title": "Trust boundary dan keamanan",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G07",
+      "doc": "ADD",
+      "title": "Runtime: mengirim P2H dengan temuan dan notifikasi",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G08",
+      "doc": "ADD",
+      "title": "Target architecture (to-be)",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G09",
+      "doc": "ADD",
+      "title": "Deployment to-be (topologi)",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G10",
+      "doc": "ADD",
+      "title": "Runtime: masuk dan sesi",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "ADD-G11",
+      "doc": "ADD",
+      "title": "Runtime: tanpa sinyal dan kirim ulang",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "TSD-G01",
+      "doc": "TSD",
+      "title": "Komponen implementasi (modul kode, API, entitas)",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "TSD-G02",
+      "doc": "TSD",
+      "title": "Sequence INT-03: Web Push dan penanganan galat",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "TSD-G03",
+      "doc": "TSD",
+      "title": "Sequence INT-01: koneksi database dan penyiapan saat boot",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "TSD-G04",
+      "doc": "TSD",
+      "title": "ERD lengkap",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "TSD-G05",
+      "doc": "TSD",
+      "title": "Alur build dan deployment (INT-02, INT-04, INT-05)",
+      "render_tier": "mermaid_png"
+    },
+    {
+      "id": "TSD-G06",
+      "doc": "TSD",
+      "title": "Sequence unduhan dokumen dengan tiket",
+      "render_tier": "mermaid_png"
+    }
+  ]
+}

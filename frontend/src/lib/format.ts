@@ -141,6 +141,7 @@ export function plural(n: number, one: string): string {
 export const ROLE_LABEL: Record<string, string> = {
   teknisi: 'Teknisi',
   pengawas: 'Pengawas',
+  teknisi_pengawas: 'Teknisi & Pengawas',
   admin: 'Admin',
 };
 

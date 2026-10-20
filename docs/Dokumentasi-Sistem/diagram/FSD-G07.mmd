@@ -1,0 +1,10 @@
+stateDiagram-v2
+  [*] --> MV : P2H dikirim teknisi
+  MV : Menunggu verifikasi
+  TV : Terverifikasi
+  MV --> TV : pengawas atau admin menandatangani
+  TV --> MV : admin membatalkan verifikasi
+  MV --> HP : admin menghapus
+  TV --> HP : admin menghapus
+  HP : Terhapus permanen
+  HP --> [*]

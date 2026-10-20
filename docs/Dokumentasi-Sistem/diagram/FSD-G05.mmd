@@ -1,0 +1,26 @@
+flowchart TB
+  subgraph PGW["Pengawas"]
+    P1["Buka P2H Menunggu verifikasi"]
+    P2["Periksa isi dan foto"]
+    P3["Tekan Verifikasi, pilih tanda<br/>tangan tersimpan atau gambar ulang"]
+  end
+  subgraph SRV["Sistem"]
+    Q1{"P2H di site<br/>pengawas?"}
+    Q2{"Bukan pengisi,<br/>atau admin?"}
+    Q3{"Belum terverifikasi dan<br/>tanda tangan ada?"}
+    S1["Simpan nama, No SID, perusahaan,<br/>tanda tangan, waktu"]
+    S2["Catat aktivitas, status<br/>menjadi Terverifikasi"]
+    S3["404 tidak ditemukan"]
+    S4["403 ditolak"]
+    S5["409 atau 422 ditolak"]
+  end
+  P1 --> Q1
+  Q1 -- Tidak --> S3
+  Q1 -- Ya --> P2
+  P2 --> P3
+  P3 --> Q2
+  Q2 -- Tidak --> S4
+  Q2 -- Ya --> Q3
+  Q3 -- Tidak --> S5
+  Q3 -- Ya --> S1
+  S1 --> S2

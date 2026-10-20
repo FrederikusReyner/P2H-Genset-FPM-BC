@@ -1,0 +1,22 @@
+sequenceDiagram
+  autonumber
+  participant IDX as index.js
+  participant BOO as bootstrap.js
+  participant MIG as migrate.js
+  participant AIV as PostgreSQL Aiven
+  IDX->>IDX: app.listen<br/>(buka port lebih dulu)
+  loop sampai 40 kali, jeda 5 detik
+    IDX->>BOO: bootstrap()
+    BOO->>MIG: migrate()
+    MIG->>AIV: koneksi TLS (pool pg)
+    MIG->>AIV: pg_advisory_lock 727201
+    MIG->>AIV: CREATE TABLE IF NOT EXISTS<br/>schema_migrations
+    MIG->>AIV: jalankan berkas sql yang<br/>belum tercatat (transaksi)
+    MIG->>AIV: pg_advisory_unlock
+    BOO->>AIV: seed site, pengaturan,<br/>daftar cek, unit, admin awal
+    alt galat
+      BOO-->>IDX: error, coba lagi
+    else sukses
+      BOO-->>IDX: selesai, state.ready true
+    end
+  end

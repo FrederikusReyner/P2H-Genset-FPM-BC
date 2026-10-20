@@ -1,0 +1,23 @@
+sequenceDiagram
+  autonumber
+  actor TEK as Teknisi
+  participant SPA as Aplikasi HP
+  participant IDB as IndexedDB HP
+  participant API as Server API
+  participant DB as PostgreSQL
+  TEK->>SPA: Tekan Kirim P2H tanpa sinyal
+  SPA->>API: POST /api/p2h
+  API--xSPA: jaringan putus<br/>atau 502, 503, 504
+  SPA->>IDB: Simpan P2H, foto,<br/>tanda tangan ke antrean
+  SPA-->>TEK: Tersimpan di HP
+  Note over SPA,API: Environment: sinyal kembali,<br/>antrean diperiksa tiap 30 detik
+  SPA->>IDB: Baca antrean
+  SPA->>API: POST /api/p2h<br/>client_uuid yang sama
+  API->>DB: Cari client_uuid
+  alt belum ada
+    API->>DB: Simpan P2H baru
+    API-->>SPA: 201
+  else sudah ada
+    API-->>SPA: 200 duplicate true
+  end
+  SPA->>IDB: Hapus dari antrean

@@ -7,11 +7,11 @@ import { PhotoPicker } from '../components/Photos';
 import { DangerCode, Empty, ErrorBox, Field, ResultChip, SectionTitle, Segmented, Spinner } from '../components/ui';
 import { ApiError, api, downloadFile } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { safeDel, safeGet, safeSet } from '../lib/cache';
+import { safeDel } from '../lib/cache';
 import { addDays, dayName, locationOf, modelOf, num, parseNum, segments, shiftLabel, shortDate, todayWita, unitTitle } from '../lib/format';
 import { useMeta, useOnline, useUnits } from '../lib/hooks';
 import { enqueue } from '../lib/outbox';
-import { MAX_PHOTOS, clearDraftPhotos, compressImage, loadDraftPhotos, saveDraftPhotos } from '../lib/photos';
+import { MAX_PHOTOS, clearDraftPhotos, compressImage } from '../lib/photos';
 import type { ChecklistItem, ChecklistSection, Condition, FormDetail, Meta, P2HPayload, ResultKind, Unit } from '../lib/types';
 
 /* =====================================================================
@@ -140,79 +140,33 @@ function P2HFormBody({
   const items = useMemo(() => allItems(meta.checklist), [meta.checklist]);
   const topRef = useRef<HTMLDivElement>(null);
 
-  // isi awal: dari P2H yang diubah, atau draf yang tersimpan di HP, atau form kosong (dihitung sekali saat dibuka)
-  const init = useMemo(() => {
-    if (mode === 'edit' && detail) return { state: fromDetail(meta, detail), restored: false };
-    const blank = blankState(meta, presetUnit ?? null);
-    if (user) {
-      try {
-        const raw = safeGet(DRAFT_KEY(user.id));
-        if (raw) {
-          const d = JSON.parse(raw) as FormState;
-          const fresh = Date.now() - d.startedAt < 20 * 3600_000;
-          const sameUnit = !presetUnit || d.unitId === presetUnit;
-          if (fresh && sameUnit && Object.keys(d.answers || {}).length > 0) {
-            const answers = Object.fromEntries(Object.entries(d.answers).map(([k, a]) => [k, { ...a, photos: a.photos ?? [], keep: a.keep ?? [] }]));
-            return { state: { ...blank, ...d, answers, params: { ...blank.params, ...d.params } }, restored: true };
-          }
-        }
-      } catch {
-        /* draf rusak: abaikan */
-      }
-    }
-    return { state: blank, restored: false };
+  // isi awal: dari P2H yang diubah, atau form KOSONG. Tidak ada draf lama yang dipulihkan (revisi 20 Okt 2026).
+  const init = useMemo(
+    () => (mode === 'edit' && detail ? fromDetail(meta, detail) : blankState(meta, presetUnit ?? null)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  const [restored, setRestored] = useState(init.restored);
-  const [st, setSt] = useState<FormState>(init.state);
+    [],
+  );
+  const [st, setSt] = useState<FormState>(init);
   const stRef = useRef(st);
   stRef.current = st;
 
-  // simpan draf (hanya form baru)
-  const saveTimer = useRef<number | undefined>(undefined);
+  // draf yang tersisa dari versi sebelumnya dibersihkan sekali, supaya form baru benar-benar mulai dari kosong
   useEffect(() => {
     if (mode !== 'create' || !user) return;
-    window.clearTimeout(saveTimer.current);
-    saveTimer.current = window.setTimeout(() => {
-      const lite = { ...st, answers: Object.fromEntries(Object.entries(st.answers).map(([k, a]) => [k, { ...a, photos: [] }])) };
-      safeSet(DRAFT_KEY(user.id), JSON.stringify(lite));
-      void saveDraftPhotos(
-        user.id,
-        Object.fromEntries(Object.entries(st.answers).filter(([, a]) => a.photos?.length).map(([k, a]) => [Number(k), a.photos])),
-      );
-    }, 500);
-    return () => window.clearTimeout(saveTimer.current);
-  }, [st, mode, user]);
-
-  // draf yang dipulihkan: ambil juga foto-fotonya
-  useEffect(() => {
-    if (mode !== 'create' || !user || !init.restored) return undefined;
-    let alive = true;
-    void loadDraftPhotos(user.id).then((m) => {
-      if (!alive || !m) return;
-      setSt((s) => {
-        const a = { ...s.answers };
-        for (const [k, ph] of Object.entries(m)) if (a[Number(k)]) a[Number(k)] = { ...a[Number(k)], photos: ph };
-        return { ...s, answers: a };
-      });
-    });
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    safeDel(DRAFT_KEY(user.id));
+    void clearDraftPhotos(user.id);
+  }, [mode, user]);
 
   const unit: Unit | undefined = useMemo(() => units.find((u) => u.id === st.unitId), [units, st.unitId]);
   const set = useCallback(<K extends keyof FormState>(k: K, v: FormState[K]) => setSt((s) => ({ ...s, [k]: v })), []);
 
-  // saat unit dipilih: isi lokasi / job site / HM awal otomatis (hanya kalau masih kosong)
+  // saat unit dipilih: isi lokasi dan job site dari data unit (pengaturan awal). Angka (HM awal, parameter) tidak pernah diisi otomatis.
   useEffect(() => {
     if (mode !== 'create' || !unit) return;
     setSt((s) => ({
       ...s,
       location: s.location || unit.location || '',
       jobSite: s.jobSite || unit.job_site || unit.site_job_site || '',
-      hmStart: s.hmStart || (unit.last_hm != null ? num(unit.last_hm) : ''),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unit?.id]);
@@ -398,10 +352,6 @@ function P2HFormBody({
         setDone({ kind: 'sent', id: r.id, result: r.result, edited: true });
       } else {
         const r = await api.post<{ id: number; result: ResultKind; duplicate?: boolean }>('/api/p2h', payload, { timeout: 120_000 });
-        if (user) {
-          safeDel(DRAFT_KEY(user.id));
-          void clearDraftPhotos(user.id);
-        }
         if (payload.save_signature && payload.signature_png && user) setUser({ ...user, signature_png: payload.signature_png, has_signature: true });
         await invalidate();
         setDone({ kind: 'sent', id: r.id, result: r.result });
@@ -414,10 +364,6 @@ function P2HFormBody({
           payload,
           label: `${unit?.code ?? 'P2H'} · Shift ${shiftLabel(st.shift)} · ${shortDate(st.date)}`,
         });
-        if (user) {
-          safeDel(DRAFT_KEY(user.id));
-          void clearDraftPhotos(user.id);
-        }
         setDone({ kind: 'queued', result: summary.result });
       } else if (err instanceof ApiError) {
         const existing = (err.details as { existing_form_id?: number } | undefined)?.existing_form_id ?? null;
@@ -441,16 +387,6 @@ function P2HFormBody({
     ]);
   }
 
-  const discardDraft = () => {
-    if (user) {
-      safeDel(DRAFT_KEY(user.id));
-      void clearDraftPhotos(user.id);
-    }
-    setSt(blankState(meta, presetUnit ?? null));
-    setRestored(false);
-    setErrors([]);
-  };
-
   /* ---------- layar selesai ---------- */
   if (done) return <DoneScreen done={done} unit={unit} detail={detail} onAgain={() => onReset?.()} />;
 
@@ -468,17 +404,6 @@ function P2HFormBody({
         </Link>
       </header>
 
-      {restored && mode === 'create' && (
-        <div className="banner banner--info" role="status">
-          <Icon name="history" size={18} />
-          <div className="grow">
-            <b>Draf dipulihkan.</b> Isian terakhir Anda masih tersimpan di HP ini.
-          </div>
-          <button type="button" className="btn btn--sm btn--ghost" onClick={discardDraft}>
-            Mulai baru
-          </button>
-        </div>
-      )}
       {!online && (
         <div className="banner banner--warn" role="status">
           <Icon name="wifiOff" size={18} />

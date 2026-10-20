@@ -407,7 +407,7 @@ function PasswordCard({ forced = false, onDone }: { forced?: boolean; onDone?: (
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setErr(null);
-    if (nw.length < 6) return setErr('Password baru minimal 6 karakter.');
+    if (nw.length < 5) return setErr('Password baru minimal 5 karakter.');
     if (nw !== nw2) return setErr('Pengulangan password baru tidak sama.');
     setBusy(true);
     try {
@@ -439,8 +439,8 @@ function PasswordCard({ forced = false, onDone }: { forced?: boolean; onDone?: (
         <Field label={forced ? 'Password dari admin' : 'Password sekarang'} htmlFor="p-cur">
           <input id="p-cur" className="input" type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} required />
         </Field>
-        <Field label="Password baru" htmlFor="p-new" hint="Minimal 6 karakter">
-          <input id="p-new" className="input" type="password" autoComplete="new-password" value={nw} onChange={(e) => setNw(e.target.value)} required minLength={6} />
+        <Field label="Password baru" htmlFor="p-new" hint="Minimal 5 karakter">
+          <input id="p-new" className="input" type="password" autoComplete="new-password" value={nw} onChange={(e) => setNw(e.target.value)} required minLength={5} />
         </Field>
         <Field label="Ulangi password baru" htmlFor="p-new2">
           <input id="p-new2" className="input" type="password" autoComplete="new-password" value={nw2} onChange={(e) => setNw2(e.target.value)} required />

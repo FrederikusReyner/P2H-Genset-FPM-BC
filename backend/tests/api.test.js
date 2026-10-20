@@ -130,6 +130,23 @@ describe('API P2H Genset', () => {
     for (const n of ['Binungan', 'Suaran', 'Gurimbang', 'Lati', 'Sambarata']) assert.ok(sites.has(n), `site ${n} tidak ada`);
   });
 
+  test('unit arsip PMMR (Breakdown & GOH, BIB): tersimpan untuk rekap Excel, tidak ikut P2H dan dashboard, hanya tampil bagi admin', async () => {
+    const pm = JSON.parse(fs.readFileSync(path.join(here, '..', 'seed', 'pmmr.json'), 'utf8'));
+    assert.equal(pm.units.length, 45, '25 genset produksi + 20 unit arsip');
+    const arsip = units.filter((u) => u.pmmr_group === 'arsip');
+    assert.ok(arsip.length >= 20, `unit arsip ada (${arsip.length})`);
+    assert.ok(arsip.every((u) => u.status === 'inactive'), 'unit arsip tidak aktif, jadi tidak wajib P2H');
+    assert.ok(units.filter((u) => u.pmmr_group === 'produksi').length >= 25);
+    const full = units.find((u) => u.code === 'BC-GE-P-29');
+    assert.ok(full && full.alt_brand && full.engine_serial_no, 'data lengkap (alternator, mesin) ikut terisi');
+    const dash = (await api('GET', '/api/dashboard', { token: admin })).json;
+    const onDash = new Set(dash.sites.flatMap((x) => x.units).map((x) => x.code));
+    for (const a of arsip) assert.ok(!onDash.has(a.code), `${a.code} (arsip) tidak boleh tampil di dashboard`);
+    // unit arsip tidak bisa diisi P2H-nya
+    const bad = await api('POST', '/api/p2h', { token: admin, body: { unit_id: arsip[0].id, shift_date: addDays(meta.shift.shift_date, -40), shift: 1, answers: buildAnswers(meta), signature_png: SIG_TEK } });
+    assert.ok([403, 422].includes(bad.status), `P2H untuk unit arsip harus ditolak (status ${bad.status})`);
+  });
+
   // Supaya uji tidak bertabrakan dengan data yang sudah ada (mis. contoh data), pakai unit uji sendiri:
   // A, B, C, E di Suaran dan D di Binungan.
   test('admin membuat 5 unit uji (dihapus lagi di akhir)', async () => {
@@ -188,6 +205,38 @@ describe('API P2H Genset', () => {
     assert.equal(me.json.user.must_change_password, false);
   });
 
+  test('password minimal 5 karakter: 4 ditolak, 5 diterima (buat akun, impor, dan ganti password)', async () => {
+    const mk = (nrp, password) => api('POST', '/api/users', { token: admin, body: { nrp, name: `Uji sandi ${rnd}`, role: 'teknisi', site_id: suaran, password } });
+    assert.equal((await mk(`p4${rnd}`, '1234')).status, 422, '4 karakter ditolak');
+    const ok = await mk(`p5${rnd}`, '12345');
+    assert.equal(ok.status, 201, JSON.stringify(ok.json));
+    ctx.users.push({ id: ok.json.item.id, role: 'teknisi', site_id: suaran });
+    assert.equal(ok.json.initial_password, '12345', 'password 5 karakter dipakai apa adanya');
+    const l = await api('POST', '/api/auth/login', { body: { nrp: `p5${rnd}`, password: '12345' } });
+    assert.equal(l.status, 200);
+    const short = await api('POST', '/api/auth/password', { token: l.json.token, body: { current_password: '12345', new_password: 'abcd' } });
+    assert.equal(short.status, 422, 'password baru 4 karakter ditolak');
+    const fine = await api('POST', '/api/auth/password', { token: l.json.token, body: { current_password: '12345', new_password: 'abcde' } });
+    assert.equal(fine.status, 200, JSON.stringify(fine.json));
+    assert.equal((await api('POST', '/api/auth/login', { body: { nrp: `p5${rnd}`, password: 'abcde' } })).status, 200);
+    // impor: password 5 karakter dipakai, 4 karakter diganti acak
+    const imp = await api('POST', '/api/users/import', {
+      token: admin,
+      body: { users: [
+        { nrp: `pi5${rnd}`, name: 'Impor lima', role: 'teknisi', site: 'Suaran', password: 'lima5' },
+        { nrp: `pi4${rnd}`, name: 'Impor empat', role: 'teknisi', site: 'Suaran', password: 'em4t' },
+      ] },
+    });
+    assert.equal(imp.status, 200, JSON.stringify(imp.json));
+    const r5 = imp.json.results.find((x) => x.nrp === `pi5${rnd}`);
+    const r4 = imp.json.results.find((x) => x.nrp === `pi4${rnd}`);
+    assert.equal(r5.initial_password, 'lima5');
+    assert.notEqual(r4.initial_password, 'em4t');
+    assert.ok(r4.initial_password.length >= 8);
+    const all = await api('GET', '/api/users', { token: admin });
+    for (const u of all.json.items.filter((x) => (x.nrp === `pi5${rnd}` || x.nrp === `pi4${rnd}`))) ctx.users.push({ id: u.id, role: u.role, site_id: u.site_id });
+  });
+
   const today = () => meta.shift.shift_date;
   const unitOf = (i) => ctx.units[i]; // 0=A 1=B 2=C 3=D(Binungan) 4=E
 
@@ -196,6 +245,7 @@ describe('API P2H Genset', () => {
     assert.deepEqual(m.json.sites.map((s) => s.name), ['Suaran']);
     const u = await api('GET', '/api/units', { token: tek.token });
     assert.ok(u.json.items.length >= 5 && u.json.items.every((x) => x.site_id === suaran), 'hanya unit Suaran');
+    assert.ok(u.json.items.every((x) => x.pmmr_group === 'produksi'), 'unit arsip PMMR tidak tampil bagi teknisi');
     const u2 = await api('GET', '/api/units', { token: tek2.token });
     assert.ok(u2.json.items.every((x) => x.site_id === binungan), 'hanya unit Binungan');
     assert.ok(u2.json.items.some((x) => x.id === unitOf(3).id));
@@ -496,6 +546,157 @@ describe('API P2H Genset', () => {
     assert.equal(after1.json.items[0].signed, true);
   });
 
+  test('teknisi & pengawas: bisa mengisi P2H dan memverifikasi P2H orang lain, tapi tidak yang diisinya sendiri', async () => {
+    const nrp = `tdual${rnd}`;
+    const c = await api('POST', '/api/users', { token: admin, body: { nrp, name: `Uji ganda ${rnd}`, role: 'teknisi_pengawas', site_id: suaran, company: 'PT Uji Coba', job_title: 'Teknisi' } });
+    assert.equal(c.status, 201, JSON.stringify(c.json));
+    assert.equal(c.json.item.role, 'teknisi_pengawas');
+    const l = await api('POST', '/api/auth/login', { body: { nrp, password: c.json.initial_password } });
+    const ch = await api('POST', '/api/auth/password', { token: l.json.token, body: { current_password: c.json.initial_password, new_password: 'PasswordBaru1' } });
+    assert.equal(ch.status, 200);
+    ctx.users.push({ id: c.json.item.id, role: 'teknisi_pengawas', site_id: suaran });
+    const dual = { token: ch.json.token, id: c.json.item.id };
+
+    // 1. mengisi P2H seperti teknisi (hanya genset di site-nya)
+    const mine = await api('POST', '/api/p2h', {
+      token: dual.token,
+      body: { unit_id: unitOf(4).id, shift_date: addDays(today(), -4), shift: 2, hm_start: 100, hm_end: 112, params: PARAMS_OK, answers: buildAnswers(meta), signature_png: SIG_TEK },
+    });
+    assert.equal(mine.status, 201, JSON.stringify(mine.json));
+    ctx.forms.push(mine.json.id);
+    const other = await api('POST', '/api/p2h', {
+      token: dual.token,
+      body: { unit_id: unitOf(3).id, shift_date: today(), shift: meta.shift.shift, answers: buildAnswers(meta), signature_png: SIG_TEK },
+    });
+    assert.equal(other.status, 403, 'tidak boleh mengisi genset di luar site-nya');
+
+    // 2. tidak boleh memverifikasi P2H yang diisinya sendiri
+    const self = await api('POST', `/api/p2h/${mine.json.id}/verify`, { token: dual.token, body: { signature_png: SIG_SUP } });
+    assert.equal(self.status, 403);
+    assert.match(self.json.error.message, /sendiri/);
+    const d1 = await api('GET', `/api/p2h/${mine.json.id}`, { token: dual.token });
+    assert.equal(d1.json.permissions.can_edit, true, 'masih bisa mengubah P2H-nya sendiri');
+    assert.equal(d1.json.permissions.can_sign, false, 'tombol verifikasi tidak muncul untuk P2H sendiri');
+
+    // 3. boleh memverifikasi P2H teknisi lain di site yang sama
+    const theirs = await api('POST', '/api/p2h', {
+      token: tek.token,
+      body: { unit_id: unitOf(4).id, shift_date: addDays(today(), -6), shift: 1, hm_start: 10, hm_end: 20, params: PARAMS_OK, answers: buildAnswers(meta), signature_png: SIG_TEK },
+    });
+    assert.equal(theirs.status, 201, JSON.stringify(theirs.json));
+    ctx.forms.push(theirs.json.id);
+    const d2 = await api('GET', `/api/p2h/${theirs.json.id}`, { token: dual.token });
+    assert.equal(d2.json.permissions.can_sign, true);
+    assert.equal((await api('POST', `/api/p2h/${theirs.json.id}/verify`, { token: dual.token, body: { signature_png: SIG_SUP, save_signature: true } })).status, 200);
+    const d3 = await api('GET', `/api/p2h/${theirs.json.id}`, { token: tek.token });
+    assert.ok(d3.json.form.sup_signed_at, 'terverifikasi');
+    assert.ok(d3.json.form.sup_name.startsWith('Uji ganda'));
+
+    // 4. pengawas biasa boleh memverifikasi P2H yang diisi teknisi & pengawas
+    assert.equal((await api('POST', `/api/p2h/${mine.json.id}/verify`, { token: sup.token, body: { signature_png: SIG_SUP } })).status, 200);
+
+    // 5. hanya melihat site-nya
+    const m = await api('GET', '/api/meta', { token: dual.token });
+    assert.deepEqual(m.json.sites.map((x) => x.name), ['Suaran']);
+    const u = await api('GET', '/api/units', { token: dual.token });
+    assert.ok(u.json.items.every((x) => x.site_id === suaran));
+  });
+
+  test('data bulanan: kWh diisi pengawas (hanya site-nya), HM dihitung dari P2H, teknisi ditolak', async () => {
+    const y = Number(today().slice(0, 4));
+    const mo = Number(today().slice(5, 7));
+    ctx.ym = { y, mo };
+    assert.equal((await api('GET', `/api/bulanan?year=${y}&month=${mo}`, { token: tek.token })).status, 403, 'teknisi tidak boleh');
+    assert.equal((await api('GET', `/api/bulanan?year=${y}&month=13`, { token: sup.token })).status, 422, 'bulan salah');
+    const g = await api('GET', `/api/bulanan?year=${y}&month=${mo}`, { token: sup.token });
+    assert.equal(g.status, 200);
+    assert.ok(g.json.items.length >= 5 && g.json.items.every((i) => i.site_id === suaran), 'hanya unit Suaran');
+    assert.ok(g.json.items.every((i) => i.code && 'hm_start' in i && 'hm_end' in i && 'kwh' in i));
+    assert.ok(!g.json.items.some((i) => i.id === unitOf(3).id), 'unit Binungan tidak tampil');
+
+    const body = (items) => ({ year: y, month: mo, items });
+    assert.equal((await api('PUT', '/api/bulanan/kwh', { token: tek.token, body: body([{ unit_id: unitOf(0).id, kwh: 10 }]) })).status, 403);
+    assert.equal((await api('PUT', '/api/bulanan/kwh', { token: sup.token, body: body([{ unit_id: unitOf(3).id, kwh: 10 }]) })).status, 404, 'unit site lain');
+    assert.equal((await api('PUT', '/api/bulanan/kwh', { token: sup.token, body: body([{ unit_id: unitOf(0).id, kwh: -5 }]) })).status, 422, 'kWh negatif');
+    const arsip = units.find((x) => x.pmmr_group === 'arsip');
+    assert.equal((await api('PUT', '/api/bulanan/kwh', { token: admin, body: body([{ unit_id: arsip.id, kwh: 10 }]) })).status, 404, 'unit arsip tidak punya kWh bulanan');
+
+    const ok = await api('PUT', '/api/bulanan/kwh', { token: sup.token, body: body([{ unit_id: unitOf(0).id, kwh: 1234.5 }, { unit_id: unitOf(1).id, kwh: '2000,5' }]) });
+    assert.equal(ok.status, 200, JSON.stringify(ok.json));
+    const back = await api('GET', `/api/bulanan?year=${y}&month=${mo}`, { token: sup.token });
+    assert.equal(back.json.items.find((i) => i.id === unitOf(0).id).kwh, 1234.5);
+    assert.equal(back.json.items.find((i) => i.id === unitOf(1).id).kwh, 2000.5, 'koma desimal diterima');
+    // HM bulan ini diambil dari P2H unit A (hm_end 26655 setelah diubah di tes sebelumnya, atau 26642.5)
+    const a = back.json.items.find((i) => i.id === unitOf(0).id);
+    assert.ok(a.hm_end > 26000 && a.hm_source === 'P2H', `HM akhir dari P2H (${a.hm_end}, ${a.hm_source})`);
+    // kosong = hapus isian
+    await api('PUT', '/api/bulanan/kwh', { token: sup.token, body: body([{ unit_id: unitOf(1).id, kwh: null }]) });
+    const cleared = await api('GET', `/api/bulanan?year=${y}&month=${mo}`, { token: admin });
+    assert.equal(cleared.json.items.find((i) => i.id === unitOf(1).id).kwh, null);
+    assert.ok(cleared.json.items.some((i) => i.site_id === binungan), 'admin melihat semua site');
+  });
+
+  test('rekap PMMR: Excel 4 lembar dengan rumus + grafik, kWh ikut terhitung, pengawas hanya site-nya', async () => {
+    const { y, mo } = ctx.ym;
+    const ask = async (token, format = 'xlsx') => api('POST', '/api/exports/ticket', { token, body: { kind: 'pmmr', format, filters: { year: y, month: mo } } });
+    assert.equal((await ask(admin, 'pdf')).status, 400, 'hanya Excel');
+    const grab = async (token) => {
+      const t = await ask(token);
+      assert.equal(t.status, 200, JSON.stringify(t.json));
+      const res = await api('GET', t.json.path, { raw: true });
+      assert.equal(res.status, 200, await res.clone().text());
+      assert.match(res.headers.get('content-disposition'), /PMMR_\d{4}\.\d{2}_DATA_GENSET/);
+      return Buffer.from(await res.arrayBuffer());
+    };
+    const codesOf = (ws) => {
+      const out = [];
+      ws.eachRow((row) => {
+        const v = row.getCell(5).value;
+        out.push(String(v && typeof v === 'object' ? (v.result ?? v.text ?? '') : (v ?? '')));
+      });
+      return out;
+    };
+
+    // admin: semua site, unit arsip ada di lembar DATA
+    const bufA = await grab(admin);
+    assert.deepEqual([...bufA.subarray(0, 4)], [0x50, 0x4b, 0x03, 0x04]);
+    const wbA = new ExcelJS.Workbook();
+    await wbA.xlsx.load(bufA);
+    assert.deepEqual(wbA.worksheets.map((w) => w.name), ['STATUS GENSET', 'DATA', 'PH', 'HM']);
+    const zip = await JSZip.loadAsync(bufA);
+    const charts = Object.keys(zip.files).filter((n) => /^xl\/charts\/chart\d+\.xml$/.test(n));
+    assert.ok(charts.length >= 6, `grafik di Excel: ${charts.length}`);
+    const ph = codesOf(wbA.getWorksheet('PH'));
+    assert.ok(ph.includes(unitOf(0).code) && ph.includes(unitOf(3).code), 'PH memuat Suaran dan Binungan');
+    const data = codesOf(wbA.getWorksheet('DATA'));
+    const arsip = units.find((x) => x.pmmr_group === 'arsip');
+    assert.ok(data.includes(arsip.code), 'unit arsip ada di lembar DATA');
+    // rumus dan kWh yang tadi disimpan (unit A: 1234.5)
+    const phWs = wbA.getWorksheet('PH');
+    let rowA = null;
+    phWs.eachRow((row, n) => {
+      const v = row.getCell(5).value;
+      if (String(v && typeof v === 'object' ? v.result : v) === unitOf(0).code) rowA = n;
+    });
+    assert.ok(rowA, 'baris unit A di lembar PH');
+    assert.equal(phWs.getCell(rowA, 18).value, 1234.5, 'kWh dari data bulanan');
+    const q = phWs.getCell(rowA, 17).value;
+    assert.match(String(q.formula), /^IF\(OR\(O\d+="",P\d+=""\),0,P\d+-O\d+\)$/, 'HM jalan = akhir - awal');
+    assert.ok(typeof phWs.getCell(rowA, 19).value.formula === 'string', 'rata-rata kW dihitung dengan rumus');
+
+    // pengawas Suaran: hanya genset Suaran, tanpa arsip
+    const wbS = new ExcelJS.Workbook();
+    await wbS.xlsx.load(await grab(sup.token));
+    const phS = codesOf(wbS.getWorksheet('PH'));
+    assert.ok(phS.includes(unitOf(0).code), 'unit Suaran ada');
+    assert.ok(!phS.includes(unitOf(3).code), 'unit Binungan tidak ada');
+    assert.ok(!codesOf(wbS.getWorksheet('DATA')).includes(arsip.code), 'pengawas tidak melihat unit arsip');
+    // teknisi boleh mengunduh (hanya site-nya)
+    assert.equal((await ask(tek.token)).status, 200);
+    assert.equal((await api('POST', '/api/exports/ticket', { token: tek.token, body: { kind: 'pmmr', format: 'docx' } })).status, 400);
+    assert.equal((await api('GET', '/api/exports/file?t=salah', { raw: true })).status, 401);
+  });
+
   test('daftar P2H dengan penyaring', async () => {
     const all = await api('GET', '/api/p2h?limit=5', { token: sup.token });
     assert.equal(all.status, 200);
@@ -739,17 +940,19 @@ describe('API P2H Genset', () => {
         { nrp: `imp3${rnd}`, name: 'Salah Site', role: 'teknisi', site: 'Mars' },
         { nrp: `imp4${rnd}`, name: 'Tanpa Site', role: 'teknisi' },
         { nrp: `imp5${rnd}`, name: 'Peran Lama', role: 'manajemen', site: 'Lati' },
+        { nrp: `imp6${rnd}`, name: 'Impor Ganda', role: 'Teknisi & Pengawas', site: 'Lati' },
       ] },
     });
     assert.equal(imp.status, 200, JSON.stringify(imp.json));
-    assert.equal(imp.json.created, 2);
+    assert.equal(imp.json.created, 3);
     assert.equal(imp.json.failed, 4);
     assert.match(imp.json.results.find((x) => x.row === 5).message, /Site wajib/);
     assert.match(imp.json.results.find((x) => x.row === 6).message, /tidak dikenal/);
     const all = await api('GET', '/api/users', { token: admin });
     const made = all.json.items.filter((x) => x.nrp.startsWith('imp') && x.nrp.endsWith(rnd));
-    assert.equal(made.length, 2);
+    assert.equal(made.length, 3);
     assert.equal(made.find((x) => x.nrp.startsWith('imp2')).role, 'pengawas');
+    assert.equal(made.find((x) => x.nrp.startsWith('imp6')).role, 'teknisi_pengawas');
     assert.equal(made.find((x) => x.nrp.startsWith('imp1')).company, 'PT Mutiara Tanjung Lestari');
     for (const u of made) ctx.users.push({ id: u.id, role: u.role, site_id: u.site_id });
 

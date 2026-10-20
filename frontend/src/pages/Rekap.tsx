@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from '../components/Icon';
+import { PmmrCard } from '../components/Pmmr';
 import { DownloadMenu, Empty, ErrorBox, PageHead, SectionTitle, Segmented, Spinner } from '../components/ui';
 import { downloadFile } from '../lib/api';
 import { PERIOD_LABEL, periodStart, periodText, stepAnchor, todayWita, type Period } from '../lib/format';
@@ -58,6 +59,8 @@ export default function RekapPage() {
       <PageHead eyebrow="Laporan" title="Rekap P2H">
         <DownloadMenu onPick={download} label="Unduh rekap" busy={dl} disabled={!d || d.sum.total === 0} />
       </PageHead>
+
+      <PmmrCard />
 
       <section className="card rekap__ctrl" aria-label="Pilih periode">
         <Segmented<Period>

@@ -1,0 +1,26 @@
+flowchart TB
+  T1["Teknisi menekan Kirim P2H"]
+  Q1{"Server<br/>terjangkau?"}
+  subgraph HP["Aplikasi di HP"]
+    H1["Simpan P2H, foto, tanda tangan<br/>ke antrean dan tampilkan<br/>Tersimpan di HP"]
+    H2["Periksa antrean saat dibuka,<br/>online, dan tiap 30 detik"]
+    H3["Kirim dengan client_uuid sama"]
+    Q2{"Balasan server"}
+    H4["Hapus dari antrean,<br/>tampilkan P2H terkirim"]
+    H5["Tandai tidak bisa dikirim,<br/>tampilkan alasan"]
+    H6["Tunggu sinyal<br/>atau masuk ulang"]
+    T3["Teknisi memilih Buang"]
+  end
+  V1["Server menyimpan P2H baru<br/>atau mengenali kiriman ulang"]
+  T1 --> Q1
+  Q1 -- Ya --> V1
+  Q1 -- Tidak --> H1
+  H1 --> H2
+  H2 --> H3
+  H3 --> V1
+  V1 --> Q2
+  Q2 -- "201 atau 200" --> H4
+  Q2 -- "409, 422, atau 5xx 8 kali" --> H5
+  Q2 -- "401 atau jaringan putus" --> H6
+  H5 --> T3
+  H6 --> H2

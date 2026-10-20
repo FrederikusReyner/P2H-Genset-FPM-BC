@@ -1,0 +1,16 @@
+flowchart TB
+  TEK["Teknisi (ACT-01)"]
+  PGW["Pengawas (ACT-02)"]
+  ADM["Admin (ACT-03)"]
+  OWN["Pemilik aplikasi dengan DBeaver (ACT-05)"]
+  SYS["P2H Genset: aplikasi web dan PWA"]
+  PUSH["Layanan Web Push peramban (INT-03)"]
+  PMMR["PMMR: sumber data unit, disalin manual"]
+  TEK -->|"isi P2H, foto, tindak lanjut"| SYS
+  PGW -->|"verifikasi dan tindak lanjut"| SYS
+  ADM -->|"kelola akun, unit, daftar cek"| SYS
+  OWN -->|"baca database hanya-baca"| SYS
+  SYS -->|"notifikasi push"| PUSH
+  PUSH -->|"notifikasi ke HP"| TEK
+  PUSH -->|"notifikasi ke HP"| PGW
+  PMMR -.->|"disalin sekali ke berkas seed (25 unit)"| SYS

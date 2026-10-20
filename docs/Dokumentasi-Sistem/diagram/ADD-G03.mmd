@@ -1,0 +1,38 @@
+flowchart TB
+  MW["Middleware global: helmet CSP, CORS, compression,<br/>rate limit, JSON, log"]
+  AUT["Auth: requireAuth, requireRole, scopeOf"]
+  subgraph RT["Routes /api"]
+    RAU["auth"]
+    RME["meta"]
+    RUN["units"]
+    RP2["p2h"]
+    RFI["findings"]
+    RDA["dashboard"]
+    RUS["users"]
+    RAD["admin"]
+    RNO["notifications"]
+    RPH["photos"]
+    REX["exports"]
+  end
+  VAL["Validasi: zod, decodePhoto, params"]
+  subgraph SV["Services"]
+    SPS["push"]
+    SEX["export"]
+    SST["settings, audit"]
+  end
+  TIM["time.js: WITA, shift, periode"]
+  DBP[("db.js: pool pg dan transaksi")]
+  WEB["Penyaji web statis dan<br/>fallback SPA"]
+  BOO["bootstrap dan migrate"]
+  RAU ~~~ RP2 ~~~ RUS ~~~ RPH
+  RME ~~~ RFI ~~~ RAD ~~~ REX
+  RUN ~~~ RDA ~~~ RNO
+  MW --> AUT
+  AUT --> RT
+  RT --> VAL
+  RT --> SV
+  RT --> TIM
+  RT --> DBP
+  SV --> DBP
+  MW --> WEB
+  BOO --> DBP

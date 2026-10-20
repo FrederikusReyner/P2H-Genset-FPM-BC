@@ -1,0 +1,32 @@
+flowchart TB
+  subgraph INT["Internet"]
+    HP["HP pengguna: akses lewat VPN atau gerbang publik (TBC)"]
+    VEN["Layanan Web Push vendor peramban"]
+  end
+  subgraph DMZ["Zona penyangga perusahaan (usulan)"]
+    RPX["Reverse proxy TLS dan WAF"]
+  end
+  subgraph APPZ["Zona aplikasi perusahaan (usulan)"]
+    ND1["Node platform container: instance API dan web"]
+    ND2["Node platform container: instance kedua"]
+  end
+  subgraph DATZ["Zona data perusahaan (usulan)"]
+    PGP[("PostgreSQL utama")]
+    PGB[("Replika atau cadangan")]
+    BKP["Penyimpanan cadangan"]
+  end
+  subgraph OPS["Operasi (usulan)"]
+    CIX["Pipeline CI dan registry image"]
+    MON["Monitoring dan log terpusat"]
+  end
+  HP --> RPX
+  RPX --> ND1
+  RPX --> ND2
+  ND1 --> PGP
+  ND2 --> PGP
+  PGP --> PGB
+  PGB --> BKP
+  CIX --> ND1
+  CIX --> ND2
+  ND1 --> MON
+  ND1 --> VEN

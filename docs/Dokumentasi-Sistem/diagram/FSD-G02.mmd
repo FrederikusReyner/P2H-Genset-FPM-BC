@@ -1,0 +1,48 @@
+flowchart LR
+  S01["SCR-01 Masuk"]
+  S02["SCR-02 Wajib ganti password"]
+  S03["SCR-03 Beranda"]
+  S04["SCR-04 P2H baru"]
+  S05["SCR-05 Konfirmasi kirim"]
+  S10["SCR-10 Riwayat"]
+  S07["SCR-07 Detail P2H"]
+  S06["SCR-06 Ubah P2H"]
+  S08["SCR-08 Lembar tindak lanjut"]
+  S09["SCR-09 Lembar verifikasi"]
+  S11["SCR-11 Rekap"]
+  S12["SCR-12 Temuan"]
+  S13["SCR-13 Unit genset"]
+  S14["SCR-14 Lembar unit"]
+  S15["SCR-15 Pemberitahuan"]
+  S16["SCR-16 Akun saya"]
+  S17["SCR-17 Pengguna"]
+  S18["SCR-18 Lembar pengguna"]
+  S19["SCR-19 Lembar impor"]
+  S20["SCR-20 Lembar password awal"]
+  S21["SCR-21 Daftar cek"]
+  S22["SCR-22 Pengaturan"]
+  S01 --> S02
+  S01 --> S03
+  S02 --> S03
+  S03 --> S04
+  S04 --> S05
+  S03 --> S10
+  S03 --> S12
+  S03 --> S13
+  S10 --> S07
+  S10 --> S11
+  S07 --> S06
+  S07 --> S09
+  S07 --> S08
+  S12 --> S08
+  S12 --> S07
+  S13 --> S14
+  S03 --> S15
+  S03 --> S16
+  S16 --> S17
+  S16 --> S21
+  S16 --> S22
+  S17 --> S18
+  S17 --> S19
+  S18 --> S20
+  S19 --> S20

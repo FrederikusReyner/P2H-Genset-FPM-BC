@@ -3,10 +3,10 @@ import { config } from '../config.js';
 import { query } from '../db.js';
 import { forbidden, unauthorized } from '../errors.js';
 
-export const ROLES = ['teknisi', 'pengawas', 'admin'];
-export const CAN_FILL = ['teknisi', 'admin']; // boleh mengisi P2H
-export const CAN_SIGN = ['pengawas', 'admin']; // boleh memverifikasi (tanda tangan pengawas)
-export const CAN_FIX = ['teknisi', 'pengawas', 'admin']; // boleh memperbarui tindak lanjut temuan
+export const ROLES = ['teknisi', 'pengawas', 'teknisi_pengawas', 'admin'];
+export const CAN_FILL = ['teknisi', 'teknisi_pengawas', 'admin']; // boleh mengisi P2H
+export const CAN_SIGN = ['pengawas', 'teknisi_pengawas', 'admin']; // boleh memverifikasi (tanda tangan pengawas); P2H sendiri tidak boleh (kecuali admin)
+export const CAN_FIX = ['teknisi', 'pengawas', 'teknisi_pengawas', 'admin']; // boleh memperbarui tindak lanjut temuan
 
 const USER_COLS = `id, nrp, name, role, site_id, company, job_title, phone, is_active, must_change_password,
   token_version, notif_mode, notif_site_ids, notif_seen_id, (signature_png IS NOT NULL) AS has_signature`;

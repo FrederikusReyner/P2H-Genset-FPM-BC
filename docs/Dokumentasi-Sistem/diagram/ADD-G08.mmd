@@ -1,0 +1,30 @@
+flowchart TB
+  subgraph USR["Pengguna: HP dan komputer"]
+    SPA["Aplikasi web PWA"]
+  end
+  subgraph NET["Jaringan perusahaan"]
+    RP["Reverse proxy dan WAF internal (usulan)"]
+    subgraph PLAT["Platform deploy internal berbasis container (usulan)"]
+      IMG["Image container API dan web"]
+    end
+    DBI[("PostgreSQL milik perusahaan (usulan)")]
+    OBJ["Penyimpanan objek untuk foto (usulan)"]
+    BAK["Cadangan terjadwal dan uji pemulihan (usulan)"]
+    MON["Monitoring dan alert (usulan)"]
+  end
+  GIT["Git perusahaan (usulan)"]
+  CI["Pipeline CI: uji, pindai dependensi, build image (usulan)"]
+  MAS["Sumber master data PMMR dan karyawan (usulan sinkron)"]
+  SSO["Login terpusat perusahaan (usulan, opsional)"]
+  PSH["Layanan Web Push vendor peramban"]
+  SPA --> RP
+  RP --> IMG
+  IMG --> DBI
+  IMG --> OBJ
+  DBI --> BAK
+  IMG --> MON
+  GIT --> CI
+  CI --> IMG
+  MAS -.-> IMG
+  SSO -.-> IMG
+  IMG --> PSH

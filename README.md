@@ -1,6 +1,6 @@
 # P2H Genset - Berau Coal / MTL
 
-Aplikasi web (bisa dipasang di HP seperti aplikasi biasa) untuk P2H genset: 5 site (Binungan, Suaran, Gurimbang, Lati, Sambarata), 25 genset, 30 butir cek. Ada dashboard, foto kerusakan, verifikasi pengawas, rekap mingguan / bulanan / tahunan, unduh PDF / Word / Excel, dan notifikasi ke HP.
+Aplikasi web (bisa dipasang di HP seperti aplikasi biasa) untuk P2H genset: 5 site (Binungan, Suaran, Gurimbang, Lati, Sambarata), 25 genset produksi (ditambah 20 unit arsip PMMR yang hanya ikut di rekap Excel), 30 butir cek. Ada dashboard, foto kerusakan, verifikasi pengawas, rekap mingguan / bulanan / tahunan, **rekap Excel PMMR** (status genset, data unit, PH, hour meter), unduh PDF / Word / Excel, dan notifikasi ke HP.
 
 > Panduan Word yang lengkap ada di folder `docs` (Panduan Deploy dan Panduan Singkat Pemakai). README ini ringkasannya. Semua perintah dan isian di bawah sudah dicoba di komputer ini. Yang BELUM dicoba: pasang sungguhan di Render / Aiven (butuh akun Anda), dan tes di iPhone / Android asli.
 
@@ -20,7 +20,7 @@ Tampilan web dan server dipasang **bersama dalam satu layanan di Render**, jadi 
 |---|---|
 | `backend/` | Server (Express 5 + PostgreSQL). Juga menyajikan tampilan web hasil build. |
 | `frontend/` | Tampilan web / aplikasi HP (React + Vite, PWA). |
-| `docs/` | Panduan Word, `Template-Impor-Akun.xlsx`, `Query-DBeaver.sql` (15 query hanya-baca). |
+| `docs/` | Panduan Word, `Template-Impor-Akun.xlsx`, `Query-DBeaver.sql` (16 query hanya-baca). |
 | `Jalankan-Lokal.bat` | Coba aplikasi di komputer sendiri (klik dua kali). |
 | `Hentikan-Lokal.bat` | Hentikan uji coba di komputer sendiri. |
 | `Buat-Kunci.bat` | Membuat kunci rahasia untuk server (JWT dan VAPID). |
@@ -30,22 +30,42 @@ Tampilan web dan server dipasang **bersama dalam satu layanan di Render**, jadi 
 | Peran | Bisa apa | Melihat |
 |---|---|---|
 | **Teknisi** | Mengisi P2H (foto wajib bila ada yang Rusak / Perbaiki), memperbarui temuan, unduh | Hanya **site-nya** |
-| **Pengawas** | Memeriksa lalu **memverifikasi** P2H (tanda tangan), memperbarui temuan, unduh | Hanya **site-nya** |
-| **Admin** | Membuat akun, mengelola unit genset, daftar cek, pengaturan | **Semua site** |
+| **Pengawas** | Memeriksa lalu **memverifikasi** P2H (tanda tangan), memperbarui temuan, mengisi kWh bulanan, unduh | Hanya **site-nya** |
+| **Teknisi & Pengawas** | **Gabungan keduanya**: mengisi P2H dan memverifikasi P2H orang lain. P2H yang ia isi sendiri **tidak bisa** ia verifikasi sendiri | Hanya **site-nya** |
+| **Admin** | Membuat akun, mengelola unit genset (termasuk data lengkap dan arsip PMMR), daftar cek, pengaturan | **Semua site** |
 
-Akun dibuat oleh admin: **Nama, Perusahaan, Jabatan, No SID** (No SID dipakai untuk masuk), peran, dan **site** (wajib untuk teknisi dan pengawas). Banyak akun sekaligus: isi `docs/Template-Impor-Akun.xlsx`, salin, lalu tempel di Kelola > Pengguna > Impor dari Excel (di HP lewat Akun saya).
+Akun dibuat oleh admin: **Nama, Perusahaan, Jabatan, No SID** (No SID dipakai untuk masuk), peran, dan **site** (wajib untuk semua peran selain admin). Banyak akun sekaligus: isi `docs/Template-Impor-Akun.xlsx`, salin, lalu tempel di Kelola > Pengguna > Impor dari Excel (di HP lewat Akun saya). Di kolom Peran boleh ditulis `Teknisi & Pengawas`.
 
 Aturan P2H:
 
 - Butir **Rusak** atau **Perbaiki** wajib ada **catatan dan minimal 1 foto** (maksimal 3 per butir). Tanpa foto, P2H tidak bisa dikirim. Foto dikecilkan otomatis di HP dan ikut tercetak di PDF / Word / Excel (lampiran foto).
 - Status P2H: **Menunggu verifikasi** -> **Terverifikasi** setelah pengawas (site yang sama, bukan pengisinya) memeriksa dan menandatangani. Setelah Terverifikasi, teknisi tidak bisa mengubahnya.
 - **Rekap** (menu Rekap): pilih **Mingguan, Bulanan, atau Tahunan**, geser periode dengan tombol panah, lihat ringkasan, lalu unduh PDF / Excel / Word.
+- **Form P2H baru selalu kosong**: tidak ada draf lama yang muncul dan tidak ada angka yang terisi sendiri. Yang terisi hanya data dari pengaturan awal (nama pengisi, tanggal, shift, lokasi, job site). Angka HM terakhir hanya tampil sebagai petunjuk.
+
+## Rekap Excel PMMR dan data bulanan
+
+Menu **Rekap > Rekap PMMR (Excel)**: pilih bulan, tekan **Unduh Excel PMMR**. Hasilnya `PMMR_<tahun>.<bulan>_DATA_GENSET_<site>.xlsx` dengan 4 lembar seperti berkas PMMR yang lama:
+
+| Lembar | Isi |
+|---|---|
+| STATUS GENSET | Per site: grafik batang (AC. limit, kWh, rata-rata kWh), status, issue, masa SKO / SLO dan sisa harinya |
+| DATA | Data lengkap tiap unit (mesin, alternator, pembelian, overhaul), plus daftar BIB dan Breakdown & GOH (unit arsip) |
+| PH | Per site: HM awal, HM akhir, HM jalan, kWh, rata-rata kW, % serapan (pakai rumus Excel) dan grafik ringkasan |
+| HM | Hour meter awal / akhir tiap bulan sepanjang tahun, per unit |
+
+- **HM** terisi sendiri. HM akhir bulan = pembacaan terakhir di P2H bulan itu; HM awal = HM akhir bulan sebelumnya. Januari sampai September 2026 diambil dari berkas PMMR lama (`backend/seed/pmmr.json`, dimuat sekali saat server pertama hidup); mulai Oktober dihitung dari P2H.
+- **kWh** diisi manual di menu **Data bulanan** (hanya pengawas, teknisi & pengawas, dan admin): total listrik yang dihasilkan genset bulan itu, dari meter kWh. Kosong = dianggap belum ada.
+- Admin mengunduh **semua site** dan unit arsip; peran lain hanya genset produksi di **site-nya**.
+- **Unit arsip** (20 unit: BIB, Breakdown & GOH): hanya tampil di Excel dan di daftar Unit genset bagi admin (centang "Tampilkan arsip PMMR"). Tidak ikut P2H dan dashboard.
+- Data lengkap unit (spesifikasi, pembelian, overhaul, SKO) diubah admin lewat Unit genset > Ubah data unit > "Data lengkap untuk rekap Excel PMMR".
+- Tanggal SKO berakhir dan "Days remaining" dihitung Excel dari tanggal hari ini saat berkas dibuka.
 
 ## Coba dulu di komputer (10 menit)
 
 1. Pasang **Node.js 22 atau lebih baru (LTS)** dari nodejs.org.
 2. Klik dua kali **`Jalankan-Lokal.bat`**. Pertama kali ia memasang paket (perlu internet), menyalakan database uji, server, dan tampilan web, lalu membuka http://localhost:5173.
-3. Masuk dengan No SID `admin` dan password dari `backend\.env` (`ADMIN_PASSWORD`). Kalau memilih data contoh, ada akun `teknisi` dan `pengawas` (site Suaran), password `Demo12345`.
+3. Masuk dengan No SID `admin` dan password dari `backend\.env` (`ADMIN_PASSWORD`). Kalau memilih data contoh, ada akun `teknisi`, `pengawas`, dan `dewi` (Teknisi & Pengawas), semuanya site Suaran, password `Demo12345`.
 4. Selesai? Klik dua kali `Hentikan-Lokal.bat`.
 
 Cara manual (tiga jendela terminal): `cd backend`, `npm install`, `copy .env.example .env`, `npm run dev:db` | `cd backend`, `npm run dev` (opsional `npm run demo`) | `cd frontend`, `npm install`, `npm run dev`.
@@ -97,7 +117,7 @@ Environment Variables (jangan isi `PORT`; alamat aplikasi terisi otomatis oleh R
 | `ADMIN_NAME` | nama admin |
 | `ADMIN_PASSWORD` | password admin, minimal 8 karakter, yang kuat |
 
-Server menyiapkan database sendiri saat pertama hidup (tabel, 5 site, 30 butir cek, 25 genset, akun admin). Buka `https://<nama-layanan>.onrender.com/api/health`: harus tampil `"ok":true`. Setelah masuk pertama kali, ganti password admin di menu Akun, lalu hapus `ADMIN_PASSWORD` dari Environment.
+Server menyiapkan database sendiri saat pertama hidup (tabel, 5 site, 30 butir cek, 25 genset produksi, 20 unit arsip PMMR beserta HM Januari-September 2026, akun admin). Buka `https://<nama-layanan>.onrender.com/api/health`: harus tampil `"ok":true`. Setelah masuk pertama kali, ganti password admin di menu Akun, lalu hapus `ADMIN_PASSWORD` dari Environment.
 
 ### 5. Cek hasil
 
@@ -155,6 +175,7 @@ Lalu di Render ubah `ADMIN_PASSWORD` (minimal 8 karakter) dan restart layanan. M
 
 ## Status uji
 
-- Lulus: pengecekan tipe dan build web; **27 uji API** (foto wajib, batas site, verifikasi, rekap, unduhan, akun, impor); **37 pengecekan layar** di Chrome (foto wajib dan pengecilan foto, verifikasi, pengawas site lain ditolak, akun admin, rekap, tanpa sinyal dengan foto); latihan produksi "satu layanan" dari salinan bersih (build seperti Render, server menyajikan web, CSP, service worker, tanpa kesalahan konsol); **koneksi database ber-TLS ala Aiven** (sertifikat sendiri, `?sslmode=require`, `DATABASE_CA` benar dan salah); template impor akun; 15 query DBeaver; jalur lupa password admin; huruf besar/kecil nama berkas untuk Linux.
+- Revisi 20 Okt 2026 (form kosong, peran Teknisi & Pengawas, rekap Excel PMMR, perbaikan unduhan di HP): pengecekan tipe dan build web lulus; **31 uji API** lulus (termasuk peran ganda, data bulanan, isi Excel PMMR); Excel dibuka di Microsoft Excel tanpa galat rumus; layar HP dan komputer dilihat di Chrome. Pemeriksaan 37 layar di bawah belum diulang setelah revisi ini.
+- Lulus (sebelum revisi): pengecekan tipe dan build web; **27 uji API** (foto wajib, batas site, verifikasi, rekap, unduhan, akun, impor); **37 pengecekan layar** di Chrome (foto wajib dan pengecilan foto, verifikasi, pengawas site lain ditolak, akun admin, rekap, tanpa sinyal dengan foto); latihan produksi "satu layanan" dari salinan bersih (build seperti Render, server menyajikan web, CSP, service worker, tanpa kesalahan konsol); **koneksi database ber-TLS ala Aiven** (sertifikat sendiri, `?sslmode=require`, `DATABASE_CA` benar dan salah); template impor akun; 16 query DBeaver; jalur lupa password admin; huruf besar/kecil nama berkas untuk Linux.
 - Belum: pasang sungguhan di Render / Aiven; iPhone dan Android asli (termasuk kamera HP untuk foto); notifikasi di HP asli.
 - Perlu Anda pastikan: "Job Site" per site (dugaan "BMO 1" untuk Binungan dan Suaran), kode dokumen form (`BC-GE-P-ex JPC`), jam shift 06:00 dan 18:00, izin IT memakai layanan cloud untuk data P2H.

@@ -1,0 +1,32 @@
+flowchart TB
+  subgraph HPD["Perangkat pengguna"]
+    UI["Layar form P2H"]
+    DR["Draf: localStorage dan IndexedDB (ENT-14, ENT-15)"]
+    OB["Antrean offline: IndexedDB (ENT-15)"]
+    CA["Salinan data terakhir dan aset (ENT-14, ENT-17)"]
+  end
+  subgraph SRVD["Server Render"]
+    API["API Express"]
+    GEN["Pembuat dokumen, tidak menyimpan berkas"]
+    SEED["Berkas seed di repository (ENT-16)"]
+  end
+  subgraph DBD["Aiven PostgreSQL"]
+    T1[("Akun, unit, daftar cek, pengaturan: ENT-01 sampai ENT-05, ENT-11")]
+    T2[("P2H, jawaban, foto: ENT-06 sampai ENT-08")]
+    T3[("Pemberitahuan, perangkat push, audit: ENT-09, ENT-10, ENT-12")]
+  end
+  subgraph EXT["Pihak ketiga"]
+    PUSHV["Layanan Web Push: judul dan isi notifikasi"]
+  end
+  UI --> DR
+  UI -->|"kirim P2H"| API
+  UI -.->|"tanpa sinyal"| OB
+  OB -->|"kirim ulang"| API
+  API --> T2
+  API --> T1
+  API --> T3
+  SEED -.->|"data awal saat boot"| T1
+  API --> GEN
+  GEN -->|"PDF, Word, Excel"| UI
+  API -->|"payload notifikasi"| PUSHV
+  API -->|"respons data"| CA

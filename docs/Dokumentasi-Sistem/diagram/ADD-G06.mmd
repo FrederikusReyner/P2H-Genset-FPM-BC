@@ -1,0 +1,23 @@
+flowchart TB
+  subgraph Z1["Zona 1: perangkat pengguna, tidak tepercaya"]
+    SPA["Aplikasi di peramban, token di localStorage"]
+  end
+  subgraph Z2["Zona 2: internet"]
+    NET["Lalu lintas HTTPS dari platform Render"]
+  end
+  subgraph Z3["Zona 3: server Render, tepercaya, rahasia di variabel lingkungan"]
+    CTL["Kontrol: CSP, rate limit, JWT, peran dan batas site, validasi zod, bcrypt"]
+    APP["Express API"]
+  end
+  subgraph Z4["Zona 4: database Aiven"]
+    DB[("PostgreSQL: data, foto, tanda tangan, tanpa RLS")]
+  end
+  subgraph Z5["Zona 5: pihak ketiga"]
+    PS["Layanan Web Push vendor peramban"]
+  end
+  SPA -->|"Bearer token"| NET
+  NET --> CTL
+  CTL --> APP
+  APP -->|"TLS, sertifikat diperiksa hanya bila DATABASE_CA diisi"| DB
+  APP -->|"HTTPS dan VAPID"| PS
+  PS -->|"notifikasi"| SPA

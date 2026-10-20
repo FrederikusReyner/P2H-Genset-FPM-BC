@@ -421,6 +421,15 @@
   color: var(--ink);
   font-size: 16px;
 }
+.hero__note {
+  margin-top: 2px;
+  font-size: 13px;
+}
+.hero__note a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .statrow {
   display: grid;
   grid-template-columns: 1fr;

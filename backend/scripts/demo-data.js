@@ -59,7 +59,7 @@ const NOTES = {
 
 const MTL = 'PT Mutiara Tanjung Lestari';
 const BC = 'PT Berau Coal';
-// admin dibuat otomatis dari .env. Tiga akun utama untuk mencoba tiap peran: admin, pengawas, teknisi.
+// admin dibuat otomatis dari .env. Akun utama untuk mencoba tiap peran: admin, pengawas, teknisi, dan dewi (Teknisi & Pengawas).
 const PEOPLE = [
   { nrp: 'teknisi', name: 'Teknisi Contoh', company: MTL, role: 'teknisi', site: 'Suaran', job_title: 'Electrician' },
   { nrp: 'pengawas', name: 'Pengawas Contoh', company: BC, role: 'pengawas', site: 'Suaran', job_title: 'Foreman' },
@@ -74,6 +74,8 @@ const PEOPLE = [
   { nrp: 'gunawan', name: 'Gunawan Hidayat', company: BC, role: 'pengawas', site: 'Gurimbang', job_title: 'Foreman' },
   { nrp: 'lukman', name: 'Lukman Hakim', company: BC, role: 'pengawas', site: 'Lati', job_title: 'Foreman' },
   { nrp: 'sari', name: 'Sari Wahyuni', company: BC, role: 'pengawas', site: 'Sambarata', job_title: 'Supervisor' },
+  // akun peran ganda (Teknisi & Pengawas): mengisi P2H dan memverifikasi P2H orang lain; hanya untuk dicoba, tidak ikut data acak
+  { nrp: 'dewi', name: 'Dewi Anggraini', company: MTL, role: 'teknisi_pengawas', site: 'Suaran', job_title: 'Electrician' },
 ];
 
 // batas server: 15 percobaan masuk per menit -> kalau kena batas, tunggu lalu ulangi

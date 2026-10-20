@@ -1,0 +1,21 @@
+sequenceDiagram
+  autonumber
+  actor USR as Pengguna
+  participant SPA as Aplikasi HP
+  participant API as Server API
+  participant GEN as Pembuat dokumen
+  participant DB as PostgreSQL
+  USR->>SPA: Pilih format dan Unduh
+  SPA->>API: POST /api/exports/ticket<br/>dengan Bearer
+  API-->>SPA: path berisi tiket JWT<br/>berlaku 3 menit
+  SPA->>API: GET /api/exports/file?t=tiket
+  API->>API: Verifikasi tiket dan jenisnya
+  API->>DB: Periksa akun aktif, hak site
+  alt tiket salah atau akun nonaktif
+    API-->>SPA: 401
+  else sah
+    API->>GEN: buildForm atau buildRekap
+    GEN->>DB: Baca P2H, jawaban, foto
+    GEN-->>API: isi berkas
+    API-->>SPA: berkas attachment,<br/>no-store
+  end

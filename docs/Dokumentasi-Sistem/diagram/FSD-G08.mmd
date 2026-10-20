@@ -1,0 +1,11 @@
+stateDiagram-v2
+  [*] --> OP : butir Rusak atau Perbaiki dikirim
+  OP : Belum diperbaiki
+  IP : Sedang diperbaiki
+  CL : Selesai diperbaiki
+  OP --> IP : tindak lanjut Sedang diperbaiki
+  OP --> CL : tindak lanjut Sudah selesai dengan catatan
+  IP --> CL : tindak lanjut Sudah selesai dengan catatan
+  OP --> [*] : butir diubah menjadi Baik saat P2H diubah
+  IP --> [*] : butir diubah menjadi Baik saat P2H diubah
+  CL --> [*]

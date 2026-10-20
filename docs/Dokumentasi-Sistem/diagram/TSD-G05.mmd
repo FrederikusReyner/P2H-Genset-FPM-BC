@@ -1,0 +1,25 @@
+flowchart TB
+  DEV["Pengembang: commit dan push"]
+  GH["GitHub (INT-04)"]
+  NPM["Registry npm (INT-05)"]
+  ENV["Variabel lingkungan rahasia diisi di dashboard Render"]
+  subgraph RND["Render (INT-02)"]
+    B1["Build: cd frontend, npm ci --include=dev, npm run build"]
+    B2["Build: cd backend, npm ci --omit=dev"]
+    ST["Start: cd backend, npm start"]
+    HC["Health check /api/health"]
+  end
+  subgraph BG["Running in Background"]
+    MG["Migrasi dan seed saat boot (CMP-08)"]
+  end
+  AIV[("Aiven PostgreSQL (INT-01)")]
+  DEV --> GH
+  GH -->|"deploy, pemicu TBC"| B1
+  NPM --> B1
+  NPM --> B2
+  B1 --> B2
+  B2 --> ST
+  ENV --> ST
+  ST --> MG
+  MG --> AIV
+  ST --> HC

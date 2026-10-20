@@ -42,7 +42,7 @@ r.get('/', async (req, res) => {
   const scope = scopeOf(req.user);
   const rows = (
     await query(
-      `${LIST_SQL} ${scope != null ? 'WHERE u.site_id = $3' : ''} ORDER BY s.sort_order, u.code`,
+      `${LIST_SQL} ${scope != null ? "WHERE u.site_id = $3 AND u.pmmr_group = 'produksi'" : ''} ORDER BY (u.pmmr_group = 'arsip'), s.sort_order, u.code`,
       scope != null ? [cur.shift_date, cur.shift, scope] : [cur.shift_date, cur.shift],
     )
   ).rows;
@@ -53,6 +53,9 @@ r.get('/', async (req, res) => {
   }));
   res.json({ items, shift: cur });
 });
+
+const txt = (n = 120) => z.string().trim().max(n).nullable().optional();
+const GohIn = z.object({ year: txt(30), location: txt(120), hm: numOrNull.optional() });
 
 const UnitIn = z.object({
   code: z.string().trim().min(2).max(40),
@@ -71,21 +74,41 @@ const UnitIn = z.object({
   status: z.enum(['running', 'standby', 'breakdown', 'inactive']),
   hm_master: numOrNull.optional(),
   notes: z.string().trim().max(500).nullable().optional(),
+  // data lengkap ala PMMR (semua boleh kosong; kalau tidak dikirim, nilai lama dibiarkan)
+  made_in: txt(60), weight_kg: numOrNull.optional(), engine_serial_no: txt(60), engine_hp: numOrNull.optional(), engine_rpm: numOrNull.optional(),
+  alt_brand: txt(60), alt_made_in: txt(60), alt_type: txt(60), alt_serial_no: txt(60), alt_phase: numOrNull.optional(), alt_freq: numOrNull.optional(),
+  alt_base_kva: numOrNull.optional(), alt_base_kw: numOrNull.optional(), alt_voltage: numOrNull.optional(), alt_ampere: numOrNull.optional(),
+  alt_cos_phi: numOrNull.optional(), alt_rpm: numOrNull.optional(), alt_avr: txt(60),
+  purchase_year: txt(60), po_number: txt(60), recommendation: txt(500), remark: txt(500), goh_total: txt(30), goh_po_pi: txt(60),
+  goh_history: z.array(GohIn).max(3).optional(),
+  issue: txt(300), sko_expiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(), sko_note: txt(120),
+  pmmr_group: z.enum(['produksi', 'arsip']).optional(), pmmr_status: txt(60), bib_location: txt(60),
 });
 
 const blank = (v) => (v === undefined || v === '' ? null : v);
-const COLS = [
+const BASE_COLS = [
   'code', 'old_code', 'site_id', 'location', 'job_site', 'brand', 'model', 'serial_no', 'engine_model',
   'capacity_kva', 'rated_kw', 'rated_voltage', 'rated_rpm', 'status', 'hm_master', 'notes',
 ];
+// kolom tambahan: hanya ditulis bila dikirim (supaya pembaruan sebagian tidak mengosongkan data lama)
+const EXTRA_COLS = [
+  'made_in', 'weight_kg', 'engine_serial_no', 'engine_hp', 'engine_rpm', 'alt_brand', 'alt_made_in', 'alt_type', 'alt_serial_no', 'alt_phase',
+  'alt_freq', 'alt_base_kva', 'alt_base_kw', 'alt_voltage', 'alt_ampere', 'alt_cos_phi', 'alt_rpm', 'alt_avr', 'purchase_year', 'po_number',
+  'recommendation', 'remark', 'goh_total', 'goh_po_pi', 'goh_history', 'issue', 'sko_expiry', 'sko_note', 'pmmr_group', 'pmmr_status', 'bib_location',
+];
+const colsOf = (b) => [...BASE_COLS, ...EXTRA_COLS.filter((c) => b[c] !== undefined)];
+const valOf = (b, c) => (c === 'goh_history' ? JSON.stringify((b.goh_history || []).filter((g) => g.year || g.location || g.hm != null)) : blank(b[c]));
+const ph = (c, i) => (c === 'goh_history' ? `$${i}::jsonb` : `$${i}`);
 
 r.post('/', requireRole('admin'), async (req, res) => {
   const b = parse(UnitIn, req.body);
   const dup = await query('SELECT id FROM units WHERE lower(code) = lower($1)', [b.code]);
   if (dup.rowCount) throw conflict(`Kode unit "${b.code}" sudah dipakai.`);
-  const vals = COLS.map((c) => blank(b[c]));
-  const ph = COLS.map((_, i) => `$${i + 1}`).join(',');
-  const { rows } = await query(`INSERT INTO units (${COLS.join(',')}) VALUES (${ph}) RETURNING *`, vals);
+  const cols = colsOf(b);
+  const { rows } = await query(
+    `INSERT INTO units (${cols.join(',')}) VALUES (${cols.map((c, i) => ph(c, i + 1)).join(',')}) RETURNING *`,
+    cols.map((c) => valOf(b, c)),
+  );
   await audit(null, req.user, 'unit.create', 'unit', rows[0].id, { code: b.code });
   res.status(201).json({ item: rows[0] });
 });
@@ -95,10 +118,11 @@ r.put('/:id', requireRole('admin'), async (req, res) => {
   const b = parse(UnitIn, req.body);
   const dup = await query('SELECT id FROM units WHERE lower(code) = lower($1) AND id <> $2', [b.code, id]);
   if (dup.rowCount) throw conflict(`Kode unit "${b.code}" sudah dipakai unit lain.`);
-  const sets = COLS.map((c, i) => `${c} = $${i + 1}`).join(', ');
+  const cols = colsOf(b);
+  const sets = cols.map((c, i) => `${c} = ${ph(c, i + 1)}`).join(', ');
   const { rows } = await query(
-    `UPDATE units SET ${sets}, updated_at = now() WHERE id = $${COLS.length + 1} RETURNING *`,
-    [...COLS.map((c) => blank(b[c])), id],
+    `UPDATE units SET ${sets}, updated_at = now() WHERE id = $${cols.length + 1} RETURNING *`,
+    [...cols.map((c) => valOf(b, c)), id],
   );
   if (!rows[0]) throw notFound('Unit tidak ditemukan.');
   await audit(null, req.user, 'unit.update', 'unit', id, { code: b.code, status: b.status });

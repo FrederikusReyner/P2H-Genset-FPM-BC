@@ -1,0 +1,27 @@
+flowchart TB
+  subgraph HPU["Perangkat pengguna (peramban)"]
+    SPA["CMP-01 Aplikasi web SPA dan PWA"]
+    SW["CMP-04 Service Worker"]
+    STO["CMP-05 Penyimpanan peramban"]
+  end
+  subgraph RND["Render Web Service"]
+    API["CMP-02 Server API Express"]
+    EXP["CMP-06 Modul ekspor dokumen"]
+    PSH["CMP-07 Modul Web Push"]
+    subgraph BG["Running in Background"]
+      BOO["CMP-08 Migrasi dan seed saat boot"]
+    end
+  end
+  DB[("CMP-03 PostgreSQL Aiven")]
+  VND["INT-03 Layanan Web Push vendor"]
+  DBV["CMP-10 DBeaver"]
+  SPA --> STO
+  SPA --> SW
+  SPA -->|"HTTPS REST JSON Bearer"| API
+  API --> EXP
+  API --> PSH
+  API -->|"SQL di atas TLS, maks. 8 koneksi"| DB
+  BOO --> DB
+  PSH -->|"HTTPS VAPID"| VND
+  VND -->|"push"| SW
+  DBV -->|"SQL di atas TLS, baca"| DB

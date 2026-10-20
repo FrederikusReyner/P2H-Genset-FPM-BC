@@ -10,6 +10,60 @@ import { useMeta, useUnits } from '../lib/hooks';
 import { useToast } from '../lib/toast';
 import type { Unit, UnitStatus } from '../lib/types';
 
+/** Isian data lengkap ala PMMR: dipakai di lembar lihat dan lembar ubah. */
+type Def = { k: keyof Unit; label: string; num?: boolean; date?: boolean; wide?: boolean };
+const ENGINE_DEFS: Def[] = [
+  { k: 'made_in', label: 'Dibuat di (negara)' },
+  { k: 'weight_kg', label: 'Berat (kg)', num: true },
+  { k: 'engine_serial_no', label: 'Nomor seri mesin' },
+  { k: 'engine_hp', label: 'Daya mesin (HP)', num: true },
+  { k: 'engine_rpm', label: 'Putaran mesin (rpm)', num: true },
+];
+const ALT_DEFS: Def[] = [
+  { k: 'alt_brand', label: 'Merek alternator' },
+  { k: 'alt_made_in', label: 'Dibuat di (negara)' },
+  { k: 'alt_type', label: 'Tipe (frame core)' },
+  { k: 'alt_serial_no', label: 'Nomor seri alternator' },
+  { k: 'alt_phase', label: 'Fasa', num: true },
+  { k: 'alt_freq', label: 'Frekuensi (Hz)', num: true },
+  { k: 'alt_base_kva', label: 'Base rate (kVA)', num: true },
+  { k: 'alt_base_kw', label: 'Base rate (kW)', num: true },
+  { k: 'alt_voltage', label: 'Tegangan (VAC)', num: true },
+  { k: 'alt_ampere', label: 'Arus base rate (A)', num: true },
+  { k: 'alt_cos_phi', label: 'Cos φ', num: true },
+  { k: 'alt_rpm', label: 'Putaran alternator (rpm)', num: true },
+  { k: 'alt_avr', label: 'Tipe AVR' },
+];
+const BUY_DEFS: Def[] = [
+  { k: 'purchase_year', label: 'Tahun pembelian' },
+  { k: 'po_number', label: 'Nomor PO' },
+  { k: 'recommendation', label: 'Rekomendasi', wide: true },
+  { k: 'remark', label: 'Keterangan (remark)', wide: true },
+];
+const GOH_DEFS: Def[] = [
+  { k: 'goh_total', label: 'Jumlah overhaul (GOH)' },
+  { k: 'goh_po_pi', label: 'PO / PI overhaul' },
+];
+const SKO_DEFS: Def[] = [
+  { k: 'issue', label: 'Isu SKO / SLO', wide: true },
+  { k: 'sko_expiry', label: 'SKO berlaku sampai', date: true },
+  { k: 'sko_note', label: 'Catatan SKO' },
+];
+const GROUP_DEFS: Def[] = [
+  { k: 'pmmr_status', label: 'Keterangan status di PMMR' },
+  { k: 'bib_location', label: 'Lokasi di daftar BIB' },
+];
+const ALL_DEFS: Def[] = [...ENGINE_DEFS, ...ALT_DEFS, ...BUY_DEFS, ...GOH_DEFS, ...SKO_DEFS, ...GROUP_DEFS];
+const GOH_ROWS = 3;
+
+const show = (u: Unit, d: Def): string => {
+  const v = u[d.k];
+  if (v === null || v === undefined || v === '') return '';
+  if (d.num && typeof v === 'number') return num(v);
+  if (d.date && typeof v === 'string') return mediumDate(v);
+  return String(v);
+};
+
 export default function UnitsPage() {
   const { user } = useAuth();
   const meta = useMeta();
@@ -19,18 +73,21 @@ export default function UnitsPage() {
   const [status, setStatus] = useState<'' | UnitStatus>('');
   const [view, setView] = useState<Unit | null>(null);
   const [edit, setEdit] = useState<Unit | 'new' | null>(null);
+  const [archive, setArchive] = useState(false);
   const isAdmin = user?.role === 'admin';
   const canFill = !!user && CAN_FILL.includes(user.role);
 
+  const archiveCount = useMemo(() => (q.data?.items ?? []).filter((u) => u.pmmr_group === 'arsip').length, [q.data]);
   const list = useMemo(() => {
     const k = text.trim().toLowerCase();
     return (q.data?.items ?? []).filter(
       (u) =>
+        (archive || u.pmmr_group !== 'arsip') &&
         (!site || u.site_id === site) &&
         (!status || u.status === status) &&
         (!k || `${u.code} ${u.old_code ?? ''} ${u.brand ?? ''} ${u.model ?? ''} ${u.location ?? ''} ${u.serial_no ?? ''}`.toLowerCase().includes(k)),
     );
-  }, [q.data, site, status, text]);
+  }, [q.data, site, status, text, archive]);
 
   return (
     <div className="page">
@@ -66,6 +123,11 @@ export default function UnitsPage() {
           <option value="breakdown">Breakdown</option>
           <option value="inactive">Tidak aktif</option>
         </select>
+        {isAdmin && archiveCount > 0 && (
+          <label className="check" title="Genset yang hanya ada di rekap Excel PMMR (Breakdown, GOH, BIB), tidak ikut P2H">
+            <input type="checkbox" checked={archive} onChange={(e) => setArchive(e.target.checked)} /> Tampilkan arsip PMMR ({archiveCount})
+          </label>
+        )}
       </div>
 
       {q.isLoading && <Spinner />}
@@ -90,7 +152,7 @@ export default function UnitsPage() {
             {list.map((u) => (
               <tr key={u.id} onClick={() => setView(u)} className="is-click" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setView(u)}>
                 <td>
-                  <span className="mono">{u.code}</span>
+                  <span className="mono">{u.code}</span> {u.pmmr_group === 'arsip' && <span className="chip chip--unit-inactive">Arsip</span>}
                   {u.old_code && <div className="small muted">lama: {u.old_code}</div>}
                 </td>
                 <td>{modelOf(u) || '—'}</td>
@@ -128,7 +190,7 @@ export default function UnitsPage() {
             <button type="button" className="hcard" onClick={() => setView(u)}>
               <div className="hcard__top">
                 <span className="mono hcard__code">{unitTitle(u)}</span>
-                <span className={`chip chip--unit-${u.status}`}>{UNIT_STATUS_LABEL[u.status]}</span>
+                <span className={`chip chip--unit-${u.status}`}>{u.pmmr_group === 'arsip' ? 'Arsip' : UNIT_STATUS_LABEL[u.status]}</span>
               </div>
               <div className="small">
                 {modelOf(u) || '—'} · {u.site_name}
@@ -150,6 +212,60 @@ export default function UnitsPage() {
   );
 }
 
+/** Data lengkap (mesin, alternator, pembelian, overhaul, SKO): hanya bagian yang ada isinya. */
+function UnitMore({ unit }: { unit: Unit }) {
+  const block = (title: string, defs: Def[]) => {
+    const rows = defs.map((d) => ({ d, v: show(unit, d) })).filter((r) => r.v);
+    if (!rows.length) return null;
+    return (
+      <>
+        <h4 className="fold__title">{title}</h4>
+        <dl className="dl">
+          {rows.map(({ d, v }) => (
+            <div key={d.k} className={d.wide ? 'dl__wide' : undefined}><dt>{d.label}</dt><dd>{v}</dd></div>
+          ))}
+        </dl>
+      </>
+    );
+  };
+  const goh = (unit.goh_history ?? []).filter((g) => g.year || g.location || g.hm != null);
+  const archived = unit.pmmr_group === 'arsip';
+  return (
+    <details className="fold">
+      <summary>Data lengkap (spesifikasi, pembelian, overhaul, SKO)</summary>
+      <div className="fold__body">
+        {archived && (
+          <div className="banner banner--info" role="note">
+            <Icon name="info" size={18} />
+            <div className="grow">Genset ini hanya tercatat di rekap Excel PMMR. Tidak ikut P2H dan tidak tampil di dashboard.</div>
+          </div>
+        )}
+        {block('Genset dan mesin', ENGINE_DEFS)}
+        {block('Alternator / generator', ALT_DEFS)}
+        {block('Pembelian dan rekomendasi', BUY_DEFS)}
+        {(show(unit, GOH_DEFS[0]) || show(unit, GOH_DEFS[1]) || goh.length > 0) && (
+          <>
+            {block('Overhaul (GOH)', GOH_DEFS)}
+            {goh.length > 0 && (
+              <ul className="small">
+                {goh.map((g, i) => (
+                  <li key={i}>
+                    {[g.year, g.location].filter(Boolean).join(' · ') || 'Overhaul'}
+                    {g.hm != null ? ` · HM ${num(g.hm)}` : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+        {block('SKO / SLO', SKO_DEFS)}
+        {block('Catatan PMMR', GROUP_DEFS)}
+        {!ALL_DEFS.some((d) => show(unit, d)) && goh.length === 0 && <p className="muted small">Belum ada data lengkap. Admin bisa mengisinya lewat tombol Ubah data unit.</p>}
+      </div>
+    </details>
+  );
+}
+
 function UnitView({ unit, onClose, onEdit, canFill }: { unit: Unit | null; onClose: () => void; onEdit?: (u: Unit) => void; canFill: boolean }) {
   return (
     <Sheet
@@ -168,7 +284,7 @@ function UnitView({ unit, onClose, onEdit, canFill }: { unit: Unit | null; onClo
             <Link to={`/p2h?unit=${unit.id}`} className="btn btn--ghost" onClick={onClose}>
               Riwayat P2H
             </Link>
-            {canFill && unit.status !== 'inactive' && (
+            {canFill && unit.status !== 'inactive' && unit.pmmr_group !== 'arsip' && (
               <Link to={`/p2h/baru?unit=${unit.id}`} className="btn btn--primary" onClick={onClose}>
                 <Icon name="plus" size={16} /> Isi P2H
               </Link>
@@ -205,19 +321,59 @@ function UnitView({ unit, onClose, onEdit, canFill }: { unit: Unit | null; onClo
           {unit.notes && <div className="dl__wide"><dt>Catatan</dt><dd>{unit.notes}</dd></div>}
         </dl>
       )}
+      {unit && <UnitMore unit={unit} />}
     </Sheet>
   );
 }
+
+type Extra = { x: Record<string, string>; goh: { year: string; location: string; hm: string }[]; group: 'produksi' | 'arsip' };
+const blankExtra = (): Extra => ({
+  x: Object.fromEntries(ALL_DEFS.map((d) => [d.k, ''])),
+  goh: Array.from({ length: GOH_ROWS }, () => ({ year: '', location: '', hm: '' })),
+  group: 'produksi',
+});
+const extraOf = (u: Unit): Extra => {
+  const e = blankExtra();
+  for (const d of ALL_DEFS) {
+    const v = u[d.k];
+    e.x[d.k] = v === null || v === undefined ? '' : d.num && typeof v === 'number' ? num(v) : String(v);
+  }
+  (u.goh_history ?? []).slice(0, GOH_ROWS).forEach((g, i) => {
+    e.goh[i] = { year: g.year ?? '', location: g.location ?? '', hm: g.hm != null ? num(g.hm) : '' };
+  });
+  e.group = u.pmmr_group === 'arsip' ? 'arsip' : 'produksi';
+  return e;
+};
 
 const EMPTY = {
   code: '', old_code: '', site_id: '' as string | number, location: '', job_site: '', brand: '', model: '', serial_no: '', engine_model: '',
   capacity_kva: '', rated_kw: '', rated_voltage: '', rated_rpm: '', status: 'running' as UnitStatus, hm_master: '', notes: '',
 };
 
+function DefFields({ defs, x, set }: { defs: Def[]; x: Record<string, string>; set: (k: string, v: string) => void }) {
+  return (
+    <div className="grid2">
+      {defs.map((d) => (
+        <Field key={d.k} label={d.label} htmlFor={`u-${d.k}`} className={d.wide ? 'field--wide' : ''}>
+          <input
+            id={`u-${d.k}`}
+            className={`input ${d.num ? 'mono' : ''}`}
+            type={d.date ? 'date' : 'text'}
+            inputMode={d.num ? 'decimal' : undefined}
+            value={x[d.k] ?? ''}
+            onChange={(e) => set(d.k, e.target.value)}
+          />
+        </Field>
+      ))}
+    </div>
+  );
+}
+
 function UnitEdit({ target, sites, onClose }: { target: Unit | 'new' | null; sites: { id: number; name: string }[]; onClose: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [f, setF] = useState(EMPTY);
+  const [ex, setEx] = useState<Extra>(blankExtra);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [del, setDel] = useState(false);
@@ -227,8 +383,11 @@ function UnitEdit({ target, sites, onClose }: { target: Unit | 'new' | null; sit
   if (target !== loadedFor) {
     setLoadedFor(target);
     setErr(null);
-    if (target === 'new') setF({ ...EMPTY, site_id: sites[0]?.id ?? '' });
-    else if (target)
+    if (target === 'new') {
+      setF({ ...EMPTY, site_id: sites[0]?.id ?? '' });
+      setEx(blankExtra());
+    } else if (target) {
+      setEx(extraOf(target));
       setF({
         code: target.code, old_code: target.old_code ?? '', site_id: target.site_id, location: target.location ?? '', job_site: target.job_site ?? '',
         brand: target.brand ?? '', model: target.model ?? '', serial_no: target.serial_no ?? '', engine_model: target.engine_model ?? '',
@@ -236,10 +395,14 @@ function UnitEdit({ target, sites, onClose }: { target: Unit | 'new' | null; sit
         rated_voltage: target.rated_voltage != null ? num(target.rated_voltage) : '', rated_rpm: target.rated_rpm != null ? num(target.rated_rpm) : '',
         status: target.status, hm_master: target.hm_master != null ? num(target.hm_master) : '', notes: target.notes ?? '',
       });
+    }
   }
 
   const up = <K extends keyof typeof EMPTY>(k: K, v: (typeof EMPTY)[K]) => setF((s) => ({ ...s, [k]: v }));
   const n = (s: string) => parseNum(s);
+  const setX = (k: string, v: string) => setEx((e) => ({ ...e, x: { ...e.x, [k]: v } }));
+  const setGoh = (i: number, k: 'year' | 'location' | 'hm', v: string) =>
+    setEx((e) => ({ ...e, goh: e.goh.map((g, j) => (j === i ? { ...g, [k]: v } : g)) }));
 
   const save = async () => {
     setBusy(true);
@@ -254,8 +417,22 @@ function UnitEdit({ target, sites, onClose }: { target: Unit | 'new' | null; sit
       for (const k of ['capacity_kva', 'rated_kw', 'rated_voltage', 'rated_rpm', 'hm_master'] as const) {
         if (Number.isNaN(body[k])) throw new Error('Kolom angka harus diisi angka saja.');
       }
-      if (target === 'new') await api.post('/api/units', body);
-      else await api.put(`/api/units/${(target as Unit).id}`, body);
+      // data lengkap: semua dikirim, supaya isian yang dikosongkan ikut terhapus
+      const more: Record<string, unknown> = { pmmr_group: ex.group };
+      for (const d of ALL_DEFS) {
+        const raw = (ex.x[d.k] ?? '').trim();
+        if (d.num) {
+          const v = parseNum(raw);
+          if (Number.isNaN(v)) throw new Error(`"${d.label}" harus diisi angka saja.`);
+          more[d.k] = v;
+        } else more[d.k] = raw || null;
+      }
+      const goh = ex.goh.map((g) => ({ year: g.year.trim() || null, location: g.location.trim() || null, hm: parseNum(g.hm) }));
+      if (goh.some((g) => Number.isNaN(g.hm))) throw new Error('HM overhaul harus diisi angka saja.');
+      more.goh_history = goh.filter((g) => g.year || g.location || g.hm != null);
+      const full = { ...body, ...more };
+      if (target === 'new') await api.post('/api/units', full);
+      else await api.put(`/api/units/${(target as Unit).id}`, full);
       await Promise.all([qc.invalidateQueries({ queryKey: ['units'] }), qc.invalidateQueries({ queryKey: ['dashboard'] })]);
       toast.push({ title: target === 'new' ? 'Unit ditambahkan' : 'Data unit disimpan', tone: 'ok' });
       onClose();
@@ -335,6 +512,39 @@ function UnitEdit({ target, sites, onClose }: { target: Unit | 'new' | null; sit
           <Field label="HM awal (dari data PMMR)" htmlFor="u-hm"><input id="u-hm" className="input mono" inputMode="decimal" value={f.hm_master} onChange={(e) => up('hm_master', e.target.value)} /></Field>
         </div>
         <Field label="Catatan" htmlFor="u-note"><textarea id="u-note" className="input textarea" rows={2} value={f.notes} onChange={(e) => up('notes', e.target.value)} maxLength={500} /></Field>
+
+        <details className="fold">
+          <summary>Data lengkap untuk rekap Excel PMMR (boleh dikosongkan)</summary>
+          <div className="fold__body">
+            <h4 className="fold__title">Genset dan mesin</h4>
+            <DefFields defs={ENGINE_DEFS} x={ex.x} set={setX} />
+            <h4 className="fold__title">Alternator / generator</h4>
+            <DefFields defs={ALT_DEFS} x={ex.x} set={setX} />
+            <h4 className="fold__title">Pembelian dan rekomendasi</h4>
+            <DefFields defs={BUY_DEFS} x={ex.x} set={setX} />
+            <h4 className="fold__title">Overhaul (GOH)</h4>
+            <DefFields defs={GOH_DEFS} x={ex.x} set={setX} />
+            {ex.goh.map((g, i) => (
+              <div key={i} className="gohrow">
+                <Field label={`Overhaul ${i + 1}: tahun / tanggal`} htmlFor={`u-goh-y${i}`}><input id={`u-goh-y${i}`} className="input" value={g.year} onChange={(e) => setGoh(i, 'year', e.target.value)} /></Field>
+                <Field label="Dikerjakan di / oleh" htmlFor={`u-goh-l${i}`}><input id={`u-goh-l${i}`} className="input" value={g.location} onChange={(e) => setGoh(i, 'location', e.target.value)} /></Field>
+                <Field label="HM saat overhaul" htmlFor={`u-goh-h${i}`}><input id={`u-goh-h${i}`} className="input mono" inputMode="decimal" value={g.hm} onChange={(e) => setGoh(i, 'hm', e.target.value)} /></Field>
+              </div>
+            ))}
+            <h4 className="fold__title">SKO / SLO</h4>
+            <DefFields defs={SKO_DEFS} x={ex.x} set={setX} />
+            <h4 className="fold__title">Pengelompokan di rekap PMMR</h4>
+            <div className="grid2">
+              <Field label="Kelompok" htmlFor="u-group" hint="Arsip = hanya muncul di rekap Excel, tidak ikut P2H dan dashboard">
+                <select id="u-group" className="input" value={ex.group} onChange={(e) => setEx((v) => ({ ...v, group: e.target.value as 'produksi' | 'arsip' }))}>
+                  <option value="produksi">Genset produksi (ikut P2H)</option>
+                  <option value="arsip">Arsip PMMR (Breakdown, GOH, BIB)</option>
+                </select>
+              </Field>
+            </div>
+            <DefFields defs={GROUP_DEFS} x={ex.x} set={setX} />
+          </div>
+        </details>
         {err && (
           <div className="banner banner--stop" role="alert">
             <Icon name="alert" size={18} />

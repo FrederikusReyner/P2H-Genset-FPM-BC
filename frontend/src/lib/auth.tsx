@@ -116,9 +116,9 @@ export function useAuth(): AuthCtx {
   return c;
 }
 
-export const CAN_FILL: Role[] = ['teknisi', 'admin']; // mengisi P2H
-export const CAN_SIGN: Role[] = ['pengawas', 'admin']; // memverifikasi (tanda tangan pengawas)
-export const CAN_FIX: Role[] = ['teknisi', 'pengawas', 'admin']; // tindak lanjut temuan
+export const CAN_FILL: Role[] = ['teknisi', 'teknisi_pengawas', 'admin']; // mengisi P2H
+export const CAN_SIGN: Role[] = ['pengawas', 'teknisi_pengawas', 'admin']; // memverifikasi (tanda tangan pengawas); P2H sendiri tidak boleh (kecuali admin)
+export const CAN_FIX: Role[] = ['teknisi', 'pengawas', 'teknisi_pengawas', 'admin']; // tindak lanjut temuan
 
 /** Teknisi dan pengawas hanya melihat site-nya sendiri; admin melihat semua site. */
 export const seesAllSites = (u: { role: Role } | null | undefined) => u?.role === 'admin';

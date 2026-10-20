@@ -229,13 +229,30 @@ SELECT to_char(created_at AT TIME ZONE 'Asia/Makassar', 'YYYY-MM') AS "Bulan",
  ORDER BY 1 DESC;
 
 
--- 15. HAK PER SITE: pengguna aktif per site dan peran (teknisi / pengawas hanya melihat site-nya)
+-- 15. HAK PER SITE: pengguna aktif per site dan peran (teknisi, pengawas, dan teknisi & pengawas hanya melihat site-nya)
 SELECT coalesce(s.name, '(semua site: admin)') AS "Site",
        count(*) FILTER (WHERE u.role = 'teknisi') AS "Teknisi",
        count(*) FILTER (WHERE u.role = 'pengawas') AS "Pengawas",
+       count(*) FILTER (WHERE u.role = 'teknisi_pengawas') AS "Teknisi & Pengawas",
        count(*) FILTER (WHERE u.role = 'admin') AS "Admin"
   FROM users u
   LEFT JOIN sites s ON s.id = u.site_id
  WHERE u.is_active
  GROUP BY s.name, s.sort_order
  ORDER BY s.sort_order NULLS LAST;
+
+
+-- 16. KWH DAN HM BULANAN UNTUK REKAP EXCEL PMMR (kWh diisi pengawas di menu Data bulanan)
+SELECT s.name AS "Site",
+       u.code AS "Unit",
+       k.year AS "Tahun",
+       k.month AS "Bulan",
+       k.kwh AS "kWh",
+       h.hm_start AS "HM awal (data lama)",
+       h.hm_end AS "HM akhir (data lama)",
+       k.updated_at AS "Diisi pada"
+  FROM unit_kwh_monthly k
+  JOIN units u ON u.id = k.unit_id
+  JOIN sites s ON s.id = u.site_id
+  LEFT JOIN unit_hm_monthly h ON h.unit_id = k.unit_id AND h.year = k.year AND h.month = k.month
+ ORDER BY k.year DESC, k.month DESC, s.sort_order, u.code;

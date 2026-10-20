@@ -1,0 +1,21 @@
+sequenceDiagram
+  autonumber
+  actor USR as Pengguna
+  participant SPA as Aplikasi HP
+  participant API as Server API
+  participant DB as PostgreSQL
+  USR->>SPA: Isi No SID dan password
+  SPA->>API: POST /api/auth/login
+  API->>DB: SELECT akun lower(nrp)
+  DB-->>API: baris akun atau kosong
+  API->>API: bcrypt.compare<br/>(hash palsu bila tidak ada)
+  alt No SID atau password salah
+    API-->>SPA: 401 bad_login
+  else berhasil
+    API->>DB: UPDATE last_login_at
+    API-->>SPA: token JWT 30 hari dan profil
+    SPA->>SPA: Simpan token di localStorage
+    SPA->>API: GET /api/meta, /api/dashboard<br/>dengan Bearer
+    API->>DB: SELECT akun, cek aktif<br/>dan token_version
+    API-->>SPA: data sesuai site pengguna
+  end
