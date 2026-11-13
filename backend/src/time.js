@@ -50,6 +50,22 @@ export function currentShift(now = new Date(), s1 = '06:00', s2 = '18:00') {
   return { shift_date: addDays(t.date, -1), shift: 2 };
 }
 
+/** Jam dinding WITA (tanggal + "HH:MM") -> waktu sebenarnya (Date). */
+export function zonedToDate(dateStr, hhmm) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const [H, M] = String(hhmm).split(':').map(Number);
+  const guess = Date.UTC(y, m - 1, d, H, M || 0);
+  const t = wita(new Date(guess));
+  const [wy, wm, wd] = t.date.split('-').map(Number);
+  const offset = Date.UTC(wy, wm - 1, wd, t.H, t.M) - guess;
+  return new Date(guess - offset);
+}
+
+/** Kapan sebuah shift berakhir (= shift berikutnya mulai). */
+export function shiftEnd(dateStr, shift, s1 = '06:00', s2 = '18:00') {
+  return Number(shift) === 1 ? zonedToDate(dateStr, s2) : zonedToDate(addDays(dateStr, 1), s1);
+}
+
 const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 

@@ -503,7 +503,8 @@ export async function setTarget(id) {
   }
   const g = (await listGroups()).find((x) => x.id === id);
   if (!g) throw new Error('Nomor pengirim bukan anggota grup itu.');
-  target = { id: g.id, name: g.name };
+  // since: shift yang berakhir sebelum grup dipilih tidak direkap (supaya grup baru tidak dibanjiri rekap lama)
+  target = { id: g.id, name: g.name, since: target?.id === g.id && target.since ? target.since : new Date().toISOString() };
   await deps.target.save(target);
   return target;
 }

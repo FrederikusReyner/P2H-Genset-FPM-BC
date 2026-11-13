@@ -7,6 +7,7 @@ import { idParam, parse } from '../middleware/validate.js';
 import { audit } from '../services/audit.js';
 import { notifyEvent } from '../services/push.js';
 import { getSettings } from '../services/settings.js';
+import { notifyFixedGroup } from '../services/wa-report.js';
 import { plain } from '../text.js';
 
 const r = Router();
@@ -153,25 +154,35 @@ r.patch('/:id', requireRole(...CAN_FIX), async (req, res) => {
          FROM p2h_forms f
         WHERE f.id = x.form_id AND f.unit_id = $5
           AND x.condition <> 'baik' AND x.fix_status <> 'closed'
-          AND (CASE WHEN $6::int IS NOT NULL THEN x.item_id = $6 ELSE (x.section_code = $7 AND x.item_no = $8) END)`,
+          AND (CASE WHEN $6::int IS NOT NULL THEN x.item_id = $6 ELSE (x.section_code = $7 AND x.item_no = $8) END)
+        RETURNING COALESCE(f.filled_at, f.submitted_at) AS seen_at`,
       [b.status, note, req.user.id, req.user.name, a.unit_id, a.item_id, a.section_code, a.item_no],
     );
+    const firstSeen = upd.rows.reduce((m, x) => (!m || new Date(x.seen_at) < new Date(m) ? x.seen_at : m), null);
     await audit(c, req.user, `finding.${b.status}`, 'answer', id, { unit: a.unit_code, item: plain(a.item_text), n: upd.rowCount });
 
     let unitFree = false;
+    let stillStop = false;
     if (b.status === 'closed') {
       const still = await c.query(
         `SELECT 1 FROM p2h_answers x JOIN p2h_forms f ON f.id = x.form_id
           WHERE f.unit_id = $1 AND x.condition <> 'baik' AND x.fix_status <> 'closed' AND x.danger_code = 'AA' LIMIT 1`,
         [a.unit_id],
       );
-      unitFree = a.danger_code === 'AA' && !still.rowCount;
+      stillStop = still.rowCount > 0;
+      unitFree = a.danger_code === 'AA' && !stillStop;
     }
-    return { a, unitFree, changed: upd.rowCount };
+    return { a, unitFree, stillStop, firstSeen, changed: upd.rowCount };
   });
 
   if (b.status === 'closed') {
-    const { a, unitFree } = info;
+    const { a, unitFree, stillStop, firstSeen } = info;
+    // juga ke grup WhatsApp, bila sudah diatur
+    void notifyFixedGroup({
+      unit_code: a.unit_code, site_name: a.site_name, item_text: a.item_text, danger_code: a.danger_code,
+      fix_note: note, by_name: req.user.name, by_role: req.user.role, first_seen_at: firstSeen,
+      unit_free: unitFree, still_stop: stillStop,
+    });
     notifyEvent({
       kind: 'finding_closed',
       severity: 'ok',

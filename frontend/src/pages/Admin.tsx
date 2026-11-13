@@ -666,7 +666,7 @@ function WhatsappCard() {
 
   return (
     <section className="card">
-      <SectionTitle hint="Tiap P2H yang ada temuannya (A atau STOP AA) dikabarkan ke grup">Kabar temuan ke grup WhatsApp</SectionTitle>
+      <SectionTitle hint="Rekap P2H tiap site per shift, STOP AA, dan temuan yang selesai diperbaiki">Kabar P2H ke grup WhatsApp</SectionTitle>
       {q.isLoading && <Spinner />}
       {q.error && <ErrorBox error={q.error} onRetry={() => void q.refetch()} />}
       {st && (
@@ -734,7 +734,7 @@ function WhatsappCard() {
                         Grup tujuan: <b>{st.group.name || st.group.id}</b>
                       </>
                     ) : (
-                      'Grup tujuan belum dipilih, jadi kabar temuan belum dikirim.'
+                      'Grup tujuan belum dipilih, jadi kabar P2H belum dikirim.'
                     )}
                   </div>
                 </div>
@@ -796,6 +796,22 @@ function WhatsappCard() {
             </>
           )}
 
+          <div className="small">
+            <b>Yang dikirim ke grup:</b>
+            <ul className="steps">
+              <li>
+                <b>Rekap per site per shift</b>: satu pesan begitu semua genset di site itu sudah di-P2H dan diverifikasi pengawas. Kalau sampai 3 jam setelah shift
+                berakhir belum lengkap, rekap dikirim dengan daftar yang belum.
+              </li>
+              <li>
+                <b>STOP AA</b>: langsung saat P2H dikirim, tidak menunggu rekap.
+              </li>
+              <li>
+                <b>Temuan selesai</b>: saat temuan ditutup, termasuk "Boleh jalan lagi" bila STOP terakhir di unit itu selesai.
+              </li>
+            </ul>
+          </div>
+
           <div className="small muted">
             Pesan dikirim langsung dari server ini ke WhatsApp, tanpa layanan pihak ketiga. Ini bukan jalur resmi WhatsApp, jadi nomor pengirim bisa diblokir: pakai
             nomor khusus.
@@ -805,7 +821,7 @@ function WhatsappCard() {
       <Confirm
         open={askLogout}
         title="Putuskan tautan WhatsApp?"
-        body="Kabar temuan ke grup berhenti sampai nomor ditautkan lagi dengan scan QR."
+        body="Kabar P2H ke grup berhenti sampai nomor ditautkan lagi dengan scan QR."
         confirmLabel="Putuskan"
         danger
         busy={busy}

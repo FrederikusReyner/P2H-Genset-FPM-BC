@@ -177,7 +177,12 @@ describe('Kabar temuan ke grup WhatsApp (gateway sendiri)', () => {
 
   test('pilih grup: hanya grup yang diikuti; nama diambil dari WhatsApp', async () => {
     await pairAndPick();
-    assert.deepEqual(savedTarget, { id: GROUP, name: 'FPM Suaran - Info Genset' });
+    assert.equal(savedTarget.id, GROUP);
+    assert.equal(savedTarget.name, 'FPM Suaran - Info Genset');
+    assert.ok(Date.now() - new Date(savedTarget.since).getTime() < 5000, 'waktu grup dipilih dicatat (shift sebelumnya tidak direkap)');
+    const since = savedTarget.since;
+    await gw.setTarget(GROUP);
+    assert.equal(savedTarget.since, since, 'memilih ulang grup yang sama tidak mengubah waktunya');
     await assert.rejects(() => gw.setTarget('120363000000000001@g.us'), /bukan anggota/);
     assert.equal((await gw.listGroups()).length, 2);
   });
