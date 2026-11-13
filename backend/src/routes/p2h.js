@@ -8,6 +8,7 @@ import { cleanParams, PARAMS } from '../params.js';
 import { audit } from '../services/audit.js';
 import { notifyEvent } from '../services/push.js';
 import { getSettings } from '../services/settings.js';
+import { notifyFindingGroup, whatsappReady } from '../services/whatsapp.js';
 import { plain } from '../text.js';
 import { daysBetween, shiftLabel, wita } from '../time.js';
 import { loadChecklist } from './meta.js';
@@ -225,6 +226,12 @@ function fireNotice(form, findings, actorUserId) {
     actorUserId,
     path: `/p2h/${form.id}`,
   }).catch((err) => console.error('[notif] gagal:', err.message));
+  // temuan (A / STOP AA) juga dikabarkan ke grup WhatsApp, bila sudah diatur di server
+  if (n.isFinding && whatsappReady()) {
+    getSettings()
+      .then((s) => notifyFindingGroup(form, findings, { deadlineHours: s.a_deadline_hours }))
+      .catch((err) => console.error('[wa] gagal:', err.message));
+  }
 }
 
 /* ---------- ambil satu form lengkap ---------- */
@@ -449,9 +456,11 @@ r.post('/', requireRole(...CAN_FILL), async (req, res) => {
       _notice: {
         form: {
           id: formId, unit_id: u.id, site_id: u.site_id, unit_code: u.code, site_name: u.site_name,
-          shift: b.shift, inspector_name: me.name,
+          shift: b.shift, shift_date: b.shift_date, inspector_name: me.name,
         },
-        findings: answers.filter((a) => a.condition !== 'baik').map((a) => ({ danger_code: a.danger_code, item_text: a.text })),
+        findings: answers
+          .filter((a) => a.condition !== 'baik')
+          .map((a) => ({ danger_code: a.danger_code, item_text: a.text, condition: a.condition, note: a.note })),
       },
     };
   });
@@ -549,8 +558,11 @@ r.put('/:id', requireRole(...CAN_FILL), async (req, res) => {
       id, result, n_aa: tot.n_aa, n_a: tot.n_a,
       _notice: fresh.length
         ? {
-            form: { id, unit_id: f.unit_id, site_id: f.site_id, unit_code: f.unit_code, site_name: f.site_name, shift: f.shift, inspector_name: f.inspector_name },
-            findings: fresh.map((a) => ({ danger_code: a.danger_code, item_text: a.text })),
+            form: {
+              id, unit_id: f.unit_id, site_id: f.site_id, unit_code: f.unit_code, site_name: f.site_name,
+              shift: f.shift, shift_date: f.shift_date, inspector_name: f.inspector_name,
+            },
+            findings: fresh.map((a) => ({ danger_code: a.danger_code, item_text: a.text, condition: a.condition, note: a.note })),
           }
         : null,
     };

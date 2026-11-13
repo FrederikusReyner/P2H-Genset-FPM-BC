@@ -70,6 +70,22 @@ export interface Settings {
   a_deadline_hours: number;
 }
 
+/** Keadaan kabar temuan ke grup WhatsApp (gateway sendiri di server: nomor ditautkan dengan scan QR). */
+export interface WhatsappStatus {
+  /** sudah ditautkan dan grup tujuan sudah dipilih */
+  enabled: boolean;
+  /** idle = belum ditautkan, pairing = menunggu scan QR, closed = ditautkan tapi sedang tidak tersambung */
+  phase: 'idle' | 'pairing' | 'connecting' | 'open' | 'closed';
+  paired: boolean;
+  number: string | null;
+  name: string | null;
+  /** gambar kode QR (data URL) selama phase = pairing */
+  qr: string | null;
+  error: string | null;
+  group: { id: string; name: string } | null;
+  last: { at: string; ok: boolean; detail: string | null } | null;
+}
+
 export interface Meta {
   server_time: string;
   wita: { date: string; H: number; M: number; minutes: number; time: string };
