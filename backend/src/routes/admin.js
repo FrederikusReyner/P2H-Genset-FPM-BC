@@ -6,6 +6,8 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { idParam, parse } from '../middleware/validate.js';
 import { audit } from '../services/audit.js';
 import { getSettings, saveSettings } from '../services/settings.js';
+import { cancelPairing, listGroups, logoutGateway, setTarget, startPairing } from '../services/wa-gateway.js';
+import { sendTestToGroup, whatsappStatus } from '../services/whatsapp.js';
 import { hhmmToMinutes } from '../time.js';
 import { loadChecklist } from './meta.js';
 
@@ -35,6 +37,65 @@ r.put('/settings', async (req, res) => {
   await saveSettings(b);
   await audit(null, req.user, 'settings.update', 'settings', null, b);
   res.json({ settings: await getSettings(true) });
+});
+
+/* ---------------- kabar temuan ke grup WhatsApp ---------------- */
+
+r.get('/whatsapp', (_req, res) => {
+  res.json(whatsappStatus());
+});
+
+/** Mulai menautkan nomor pengirim: server menyiapkan kode QR, tampilan mengambilnya lewat GET /whatsapp. */
+r.post('/whatsapp/connect', async (req, res) => {
+  try {
+    await startPairing();
+  } catch (err) {
+    throw badRequest(`Gagal menyiapkan tautan WhatsApp: ${err.message}`);
+  }
+  await audit(null, req.user, 'whatsapp.connect', 'settings', null);
+  res.json(whatsappStatus());
+});
+
+/** Batal menautkan (QR ditutup sebelum di-scan). */
+r.post('/whatsapp/cancel', async (_req, res) => {
+  await cancelPairing();
+  res.json(whatsappStatus());
+});
+
+/** Putuskan tautan dan hapus sesi WhatsApp dari database. */
+r.post('/whatsapp/logout', async (req, res) => {
+  const out = await logoutGateway();
+  await audit(null, req.user, 'whatsapp.logout', 'settings', null, out);
+  res.json({ ...whatsappStatus(), clean: out.clean });
+});
+
+/** Daftar grup yang diikuti nomor pengirim, untuk memilih grup tujuan. */
+r.get('/whatsapp/groups', async (_req, res) => {
+  try {
+    res.json({ items: await listGroups() });
+  } catch (err) {
+    throw badRequest(`Gagal mengambil daftar grup: ${err.message}`);
+  }
+});
+
+/** Pilih grup tujuan (id kosong = kosongkan). */
+r.put('/whatsapp/group', async (req, res) => {
+  const { id } = parse(z.object({ id: z.string().trim().regex(/^[0-9-]+@g\.us$/, 'ID grup tidak dikenal.').nullable() }), req.body);
+  let group;
+  try {
+    group = await setTarget(id);
+  } catch (err) {
+    throw badRequest(`Gagal memilih grup: ${err.message}`);
+  }
+  await audit(null, req.user, 'whatsapp.group', 'settings', null, { group: group?.name ?? null });
+  res.json(whatsappStatus());
+});
+
+/** Kirim pesan percobaan ke grup tujuan. */
+r.post('/whatsapp/test', async (req, res) => {
+  const out = await sendTestToGroup(req.user.name);
+  await audit(null, req.user, 'whatsapp.test', 'settings', null, { ok: out.ok });
+  res.json(out);
 });
 
 /* ---------------- daftar cek ---------------- */

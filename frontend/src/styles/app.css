@@ -1694,6 +1694,30 @@
   background: var(--ok);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 25%, transparent);
 }
+/* kode QR untuk menautkan WhatsApp: latar selalu putih supaya terbaca kamera, juga di tema gelap */
+.waqr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px 20px;
+  padding: 14px;
+  border: 1.5px solid var(--line-2);
+  border-radius: var(--r);
+}
+.waqr__box {
+  display: grid;
+  place-items: center;
+  width: min(100%, 300px);
+  aspect-ratio: 1;
+  background: #fff;
+  border-radius: var(--r);
+}
+.waqr__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
 .prefs {
   display: grid;
   gap: 14px;

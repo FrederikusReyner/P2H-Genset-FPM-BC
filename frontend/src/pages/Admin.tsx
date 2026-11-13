@@ -7,7 +7,7 @@ import { useAuth } from '../lib/auth';
 import { ROLE_LABEL, ago, dateTime, segments } from '../lib/format';
 import { useMeta } from '../lib/hooks';
 import { useToast } from '../lib/toast';
-import type { ChecklistSection, Role, Settings, UserRow } from '../lib/types';
+import type { ChecklistSection, Role, Settings, UserRow, WhatsappStatus } from '../lib/types';
 
 /* =====================================================================
    Pengguna
@@ -602,6 +602,236 @@ export function ChecklistPage() {
    Pengaturan
    ===================================================================== */
 
+type WaGroup = { id: string; name: string; size: number | null; admin_only: boolean };
+
+/** Kabar temuan ke grup WhatsApp: tautkan nomor pengirim (scan QR), pilih grup tujuan, kirim pesan tes. */
+function WhatsappCard() {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ['admin-whatsapp'],
+    queryFn: () => api.get<WhatsappStatus>('/api/admin/whatsapp'),
+    // selama menunggu scan / menyambung, tanya server tiap 2 detik supaya kode QR dan keadaannya ikut berganti
+    refetchInterval: (query) => (query.state.data && ['pairing', 'connecting'].includes(query.state.data.phase) ? 2000 : false),
+  });
+  const [busy, setBusy] = useState(false);
+  const [groups, setGroups] = useState<WaGroup[] | null>(null);
+  const [askLogout, setAskLogout] = useState(false);
+  const st = q.data;
+  const put = (s: WhatsappStatus) => {
+    qc.setQueryData(['admin-whatsapp'], s);
+  };
+
+  const act = async (failTitle: string, fn: () => Promise<void>) => {
+    setBusy(true);
+    try {
+      await fn();
+    } catch (e) {
+      toast.push({ title: failTitle, body: e instanceof Error ? e.message : undefined, tone: 'danger' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const connect = () => act('Gagal menyiapkan kode QR', async () => put(await api.post<WhatsappStatus>('/api/admin/whatsapp/connect')));
+  const cancel = () => act('Gagal membatalkan', async () => put(await api.post<WhatsappStatus>('/api/admin/whatsapp/cancel')));
+  const logout = () =>
+    act('Gagal memutus tautan', async () => {
+      const r = await api.post<WhatsappStatus & { clean: boolean }>('/api/admin/whatsapp/logout');
+      put(r);
+      setGroups(null);
+      setAskLogout(false);
+      toast.push(
+        r.clean
+          ? { title: 'Tautan WhatsApp diputus', tone: 'ok' }
+          : { title: 'Sesi dihapus dari server', body: 'WhatsApp tidak bisa dihubungi. Cabut juga perangkat "P2H Genset" di HP: WhatsApp > Perangkat tertaut.', tone: 'warn', ms: 12000 },
+      );
+    });
+  const loadGroups = () =>
+    act('Daftar grup gagal diambil', async () => setGroups((await api.get<{ items: WaGroup[] }>('/api/admin/whatsapp/groups')).items));
+  const pick = (g: WaGroup) =>
+    act('Gagal memilih grup', async () => {
+      put(await api.put<WhatsappStatus>('/api/admin/whatsapp/group', { id: g.id }));
+      setGroups(null);
+      toast.push({ title: 'Grup tujuan disimpan', body: g.name, tone: 'ok' });
+    });
+  const test = () =>
+    act('Tes gagal', async () => {
+      const r = await api.post<{ ok: boolean; reason?: string }>('/api/admin/whatsapp/test');
+      toast.push(r.ok ? { title: 'Tes terkirim', body: 'Periksa grup WhatsApp.', tone: 'ok' } : { title: 'Tes gagal', body: r.reason, tone: 'warn' });
+      void q.refetch();
+    });
+
+  const phaseLabel = !st ? '' : st.phase === 'open' ? 'Tersambung' : st.phase === 'connecting' ? 'Menyambung…' : 'Ditautkan, sedang tidak tersambung';
+
+  return (
+    <section className="card">
+      <SectionTitle hint="Rekap P2H tiap site per shift, STOP AA, dan temuan yang selesai diperbaiki">Kabar P2H ke grup WhatsApp</SectionTitle>
+      {q.isLoading && <Spinner />}
+      {q.error && <ErrorBox error={q.error} onRetry={() => void q.refetch()} />}
+      {st && (
+        <div className="stack">
+          {st.error && st.phase !== 'open' && (
+            <div className="banner banner--warn">
+              <Icon name="alert" size={18} />
+              <div className="grow">{st.error}</div>
+            </div>
+          )}
+
+          {!st.paired && st.phase !== 'pairing' && (
+            <div className="notifstate">
+              <span className="notifstate__dot" aria-hidden="true" />
+              <div className="grow">
+                <b>WhatsApp belum ditautkan</b>
+                <div className="small muted">
+                  Tautkan nomor pengirim dengan scan kode QR, seperti membuka WhatsApp Web. Pakai nomor khusus, dan pastikan nomor itu anggota grup tujuan.
+                </div>
+              </div>
+              <button type="button" className="btn btn--primary" onClick={() => void connect()} disabled={busy}>
+                <Icon name="phone" size={18} /> {busy ? 'Menyiapkan…' : 'Hubungkan WhatsApp'}
+              </button>
+            </div>
+          )}
+
+          {!st.paired && st.phase === 'pairing' && (
+            <div className="waqr">
+              <div className="waqr__box">
+                {st.qr ? <img className="waqr__img" src={st.qr} alt="Kode QR untuk menautkan WhatsApp" /> : <Spinner label="Menyiapkan kode QR…" />}
+              </div>
+              <div className="grow stack">
+                <b>Scan kode ini dari HP nomor pengirim</b>
+                <ol className="steps small">
+                  <li>Buka WhatsApp di HP.</li>
+                  <li>
+                    Ketuk menu titik tiga (Android) atau Pengaturan (iPhone), lalu <b>Perangkat tertaut</b>.
+                  </li>
+                  <li>
+                    Ketuk <b>Tautkan perangkat</b>, lalu arahkan kamera ke kode ini.
+                  </li>
+                </ol>
+                <div className="small muted">Kode berganti sendiri dan kedaluwarsa setelah beberapa menit. Kalau kedaluwarsa, tekan Hubungkan lagi.</div>
+                <div>
+                  <button type="button" className="btn btn--sm btn--ghost" onClick={() => void cancel()} disabled={busy}>
+                    Batal
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {st.paired && (
+            <>
+              <div className={`notifstate${st.enabled ? ' notifstate--on' : ''}`}>
+                <span className="notifstate__dot" aria-hidden="true" />
+                <div className="grow">
+                  <b>
+                    {phaseLabel}
+                    {st.number ? ` · ${st.number}` : ''}
+                  </b>
+                  <div className="small muted">
+                    {st.group ? (
+                      <>
+                        Grup tujuan: <b>{st.group.name || st.group.id}</b>
+                      </>
+                    ) : (
+                      'Grup tujuan belum dipilih, jadi kabar P2H belum dikirim.'
+                    )}
+                  </div>
+                </div>
+                <button type="button" className="btn btn--sm btn--ghost" onClick={() => void test()} disabled={busy || !st.enabled}>
+                  <Icon name="send" size={16} /> Kirim pesan tes
+                </button>
+                <button type="button" className="btn btn--sm btn--ghost" onClick={() => setAskLogout(true)} disabled={busy}>
+                  Putuskan
+                </button>
+              </div>
+
+              {st.last && (
+                <div className="small muted">
+                  Kiriman terakhir {dateTime(st.last.at)}: {st.last.ok ? 'berhasil' : `gagal (${st.last.detail ?? 'tanpa keterangan'})`}
+                </div>
+              )}
+
+              <div className="row row--wrap">
+                <button type="button" className="btn btn--sm btn--ghost" onClick={() => void loadGroups()} disabled={busy}>
+                  <Icon name="list" size={16} /> {st.group ? 'Ganti grup tujuan' : 'Pilih grup tujuan'}
+                </button>
+              </div>
+              {groups && groups.length === 0 && (
+                <div className="small muted">Nomor ini belum menjadi anggota grup mana pun. Masukkan dulu ke grup tujuan, lalu tekan tombol di atas lagi.</div>
+              )}
+              {groups && groups.length > 0 && (
+                <div className="tableview__scroll">
+                  <table className="table table--tight">
+                    <thead>
+                      <tr>
+                        <th>Nama grup</th>
+                        <th>Anggota</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groups.map((g) => (
+                        <tr key={g.id}>
+                          <td>
+                            {g.name || '—'}
+                            {g.admin_only && <div className="small muted">Hanya admin grup yang bisa mengirim di sini</div>}
+                          </td>
+                          <td className="small">{g.size ?? '—'}</td>
+                          <td>
+                            {st.group?.id === g.id ? (
+                              <span className="chip chip--ok">Dipakai</span>
+                            ) : (
+                              <button type="button" className="btn btn--sm btn--ghost" onClick={() => void pick(g)} disabled={busy}>
+                                Pakai grup ini
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="small">
+            <b>Yang dikirim ke grup:</b>
+            <ul className="steps">
+              <li>
+                <b>Rekap per site per shift</b>: satu pesan begitu semua genset di site itu sudah di-P2H dan diverifikasi pengawas. Kalau sampai 3 jam setelah shift
+                berakhir belum lengkap, rekap dikirim dengan daftar yang belum.
+              </li>
+              <li>
+                <b>STOP AA</b>: langsung saat P2H dikirim, tidak menunggu rekap.
+              </li>
+              <li>
+                <b>Temuan selesai</b>: saat temuan ditutup, termasuk "Boleh jalan lagi" bila STOP terakhir di unit itu selesai.
+              </li>
+            </ul>
+          </div>
+
+          <div className="small muted">
+            Pesan dikirim langsung dari server ini ke WhatsApp, tanpa layanan pihak ketiga. Ini bukan jalur resmi WhatsApp, jadi nomor pengirim bisa diblokir: pakai
+            nomor khusus.
+          </div>
+        </div>
+      )}
+      <Confirm
+        open={askLogout}
+        title="Putuskan tautan WhatsApp?"
+        body="Kabar P2H ke grup berhenti sampai nomor ditautkan lagi dengan scan QR."
+        confirmLabel="Putuskan"
+        danger
+        busy={busy}
+        onConfirm={() => void logout()}
+        onClose={() => setAskLogout(false)}
+      />
+    </section>
+  );
+}
+
 export function SettingsPage() {
   const qc = useQueryClient();
   const toast = useToast();
@@ -671,6 +901,8 @@ export function SettingsPage() {
           </div>
         </section>
       )}
+
+      <WhatsappCard />
 
       <section className="card">
         <SectionTitle hint="Siapa mengubah apa (60 terakhir)">Catatan aktivitas</SectionTitle>

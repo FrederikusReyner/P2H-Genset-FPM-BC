@@ -906,6 +906,30 @@ describe('API P2H Genset', () => {
     assert.equal((await api('POST', '/api/notifications/push/unsubscribe', { token: tek.token, body: { endpoint: sub.endpoint } })).status, 200);
   });
 
+  test('kabar temuan ke grup WhatsApp: semua pengaturannya hanya untuk admin; sesi tidak ikut tampil', async () => {
+    const s = await api('GET', '/api/admin/whatsapp', { token: admin });
+    assert.equal(s.status, 200);
+    assert.equal(typeof s.json.enabled, 'boolean');
+    assert.equal(typeof s.json.paired, 'boolean');
+    assert.ok(['idle', 'pairing', 'connecting', 'open', 'closed'].includes(s.json.phase));
+    assert.ok(!('creds' in s.json) && !('token' in s.json));
+    const bad = await api('PUT', '/api/admin/whatsapp/group', { token: admin, body: { id: 'bukan-grup' } });
+    assert.equal(bad.status, 422);
+    for (const [method, url] of [
+      ['GET', '/api/admin/whatsapp'], ['POST', '/api/admin/whatsapp/test'], ['GET', '/api/admin/whatsapp/groups'],
+      ['POST', '/api/admin/whatsapp/connect'], ['POST', '/api/admin/whatsapp/logout'], ['PUT', '/api/admin/whatsapp/group'],
+    ]) {
+      assert.equal((await api(method, url, { token: sup.token })).status, 403, `${method} ${url} harus ditolak untuk pengawas`);
+    }
+    // pesan tes hanya dicoba bila belum diatur, supaya uji ini tidak mengirim pesan ke grup sungguhan
+    if (!s.json.enabled) {
+      const t = await api('POST', '/api/admin/whatsapp/test', { token: admin });
+      assert.equal(t.status, 200);
+      assert.equal(t.json.ok, false);
+      assert.match(t.json.reason, /ditautkan|dipilih/);
+    }
+  });
+
   test('admin: pengaturan, daftar cek, impor akun (No SID, Nama, Perusahaan, Jabatan, Peran, Site), catatan aktivitas', async () => {
     const s = await api('GET', '/api/admin/settings', { token: admin });
     assert.equal(s.json.settings.shift1_start, '06:00');

@@ -20,7 +20,7 @@ Tampilan web dan server dipasang **bersama dalam satu layanan di Render**, jadi 
 |---|---|
 | `backend/` | Server (Express 5 + PostgreSQL). Juga menyajikan tampilan web hasil build. |
 | `frontend/` | Tampilan web / aplikasi HP (React + Vite, PWA). |
-| `docs/` | Panduan Word, `Template-Impor-Akun.xlsx`, `Query-DBeaver.sql` (16 query hanya-baca). |
+| `docs/` | Panduan Word, `Template-Impor-Akun.xlsx`, `Query-DBeaver.sql` (16 query hanya-baca), `Notifikasi-WhatsApp.md`. |
 | `Jalankan-Lokal.bat` | Coba aplikasi di komputer sendiri (klik dua kali). |
 | `Hentikan-Lokal.bat` | Hentikan uji coba di komputer sendiri. |
 | `Buat-Kunci.bat` | Membuat kunci rahasia untuk server (JWT dan VAPID). |
@@ -42,6 +42,7 @@ Aturan P2H:
 - Status P2H: **Menunggu verifikasi** -> **Terverifikasi** setelah pengawas (site yang sama, bukan pengisinya) memeriksa dan menandatangani. Setelah Terverifikasi, teknisi tidak bisa mengubahnya.
 - **Rekap** (menu Rekap): pilih **Mingguan, Bulanan, atau Tahunan**, geser periode dengan tombol panah, lihat ringkasan, lalu unduh PDF / Excel / Word.
 - **Form P2H baru selalu kosong**: tidak ada draf lama yang muncul dan tidak ada angka yang terisi sendiri. Yang terisi hanya data dari pengaturan awal (nama pengisi, tanggal, shift, lokasi, job site). Angka HM terakhir hanya tampil sebagai petunjuk.
+- **Kabar P2H ke grup WhatsApp** (pilihan): rekap P2H tiap site per shift (setelah semua diverifikasi pengawas), STOP AA langsung, dan temuan yang selesai diperbaiki bisa dikabarkan ke grup WhatsApp langsung dari server (gateway sendiri, tanpa pihak ketiga; nomor ditautkan dengan scan QR). Cara memasangnya ada di [`docs/Notifikasi-WhatsApp.md`](docs/Notifikasi-WhatsApp.md).
 
 ## Rekap Excel PMMR dan data bulanan
 

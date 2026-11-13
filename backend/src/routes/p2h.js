@@ -8,6 +8,8 @@ import { cleanParams, PARAMS } from '../params.js';
 import { audit } from '../services/audit.js';
 import { notifyEvent } from '../services/push.js';
 import { getSettings } from '../services/settings.js';
+import { onSiteActivity, reportSent } from '../services/wa-report.js';
+import { notifyFindingGroup, whatsappReady } from '../services/whatsapp.js';
 import { plain } from '../text.js';
 import { daysBetween, shiftLabel, wita } from '../time.js';
 import { loadChecklist } from './meta.js';
@@ -225,6 +227,18 @@ function fireNotice(form, findings, actorUserId) {
     actorUserId,
     path: `/p2h/${form.id}`,
   }).catch((err) => console.error('[notif] gagal:', err.message));
+  // grup WhatsApp: STOP AA dikabarkan langsung. Temuan A cukup lewat rekap site per shift,
+  // kecuali rekap shift itu sudah terkirim (mis. temuan baru saat P2H diubah): maka dikabarkan langsung juga.
+  if (n.isFinding && whatsappReady()) {
+    const stop = findings.some((f) => f.danger_code === 'AA');
+    (stop ? Promise.resolve(true) : reportSent(form.site_id, form.shift_date, form.shift))
+      .then(async (now) => {
+        if (!now) return;
+        const s = await getSettings();
+        await notifyFindingGroup(form, findings, { deadlineHours: s.a_deadline_hours });
+      })
+      .catch((err) => console.error('[wa] gagal:', err.message));
+  }
 }
 
 /* ---------- ambil satu form lengkap ---------- */
@@ -449,15 +463,20 @@ r.post('/', requireRole(...CAN_FILL), async (req, res) => {
       _notice: {
         form: {
           id: formId, unit_id: u.id, site_id: u.site_id, unit_code: u.code, site_name: u.site_name,
-          shift: b.shift, inspector_name: me.name,
+          shift: b.shift, shift_date: b.shift_date, inspector_name: me.name,
         },
-        findings: answers.filter((a) => a.condition !== 'baik').map((a) => ({ danger_code: a.danger_code, item_text: a.text })),
+        findings: answers
+          .filter((a) => a.condition !== 'baik')
+          .map((a) => ({ danger_code: a.danger_code, item_text: a.text, condition: a.condition, note: a.note })),
       },
     };
   });
 
   if (out._notice) {
-    fireNotice(out._notice.form, out._notice.findings, req.user.id);
+    const f = out._notice.form;
+    fireNotice(f, out._notice.findings, req.user.id);
+    // rekap grup WhatsApp: shift lama di site ini yang sudah lewat tetapi belum lengkap
+    void onSiteActivity(f.site_id, null, null);
     delete out._notice;
   }
   res.status(out.duplicate ? 200 : 201).json(out);
@@ -549,8 +568,11 @@ r.put('/:id', requireRole(...CAN_FILL), async (req, res) => {
       id, result, n_aa: tot.n_aa, n_a: tot.n_a,
       _notice: fresh.length
         ? {
-            form: { id, unit_id: f.unit_id, site_id: f.site_id, unit_code: f.unit_code, site_name: f.site_name, shift: f.shift, inspector_name: f.inspector_name },
-            findings: fresh.map((a) => ({ danger_code: a.danger_code, item_text: a.text })),
+            form: {
+              id, unit_id: f.unit_id, site_id: f.site_id, unit_code: f.unit_code, site_name: f.site_name,
+              shift: f.shift, shift_date: f.shift_date, inspector_name: f.inspector_name,
+            },
+            findings: fresh.map((a) => ({ danger_code: a.danger_code, item_text: a.text, condition: a.condition, note: a.note })),
           }
         : null,
     };
@@ -575,8 +597,8 @@ const SignIn = z.object({
 async function verifyHandler(req, res) {
   const id = idParam(req);
   const b = parse(SignIn, req.body);
-  await tx(async (c) => {
-    const f = (await c.query('SELECT id, user_id, site_id, sup_signed_at FROM p2h_forms WHERE id = $1 FOR UPDATE', [id])).rows[0];
+  const done = await tx(async (c) => {
+    const f = (await c.query('SELECT id, user_id, site_id, shift_date, shift, sup_signed_at FROM p2h_forms WHERE id = $1 FOR UPDATE', [id])).rows[0];
     if (!f || !inScope(req.user, f.site_id)) throw notFound('P2H tidak ditemukan.');
     if (f.sup_signed_at) throw conflict('P2H ini sudah terverifikasi pengawas.');
     if (f.user_id === req.user.id && req.user.role !== 'admin') {
@@ -595,7 +617,10 @@ async function verifyHandler(req, res) {
       [req.user.id, me.name, me.nrp, me.company, sig, id],
     );
     await audit(c, req.user, 'p2h.verify', 'p2h', id);
+    return f;
   });
+  // rekap grup WhatsApp: terkirim begitu semua P2H site ini di shift ini terverifikasi
+  void onSiteActivity(done.site_id, done.shift_date, done.shift);
   res.json({ ok: true });
 }
 r.post('/:id/verify', requireRole(...CAN_SIGN), verifyHandler);
