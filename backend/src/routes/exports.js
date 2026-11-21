@@ -3,8 +3,9 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { config } from '../config.js';
 import { query } from '../db.js';
-import { badRequest, notFound, unauthorized } from '../errors.js';
-import { requireAuth, scopeOf } from '../middleware/auth.js';
+import { badRequest, forbidden, notFound, unauthorized } from '../errors.js';
+import { requireAuth, scopeOf, GENSET_CODE, requireForm, canUseForm } from '../middleware/auth.js';
+import { FORM_REKAP_BUILD } from '../services/export/form-rekap.js';
 import { parse } from '../middleware/validate.js';
 import { buildFormDocx } from '../services/export/docx.js';
 import { buildFormPdf } from '../services/export/pdf.js';
@@ -34,7 +35,7 @@ const TicketIn = z.object({
  * Unduhan memakai "tiket" berumur 3 menit: HP meminta tiket (pakai login), lalu membuka alamat unduhan.
  * Cara ini jalan juga di iPhone / aplikasi terpasang, yang sulit menyimpan file hasil fetch.
  */
-r.post('/ticket', requireAuth, async (req, res) => {
+r.post('/ticket', requireAuth, requireForm(GENSET_CODE), async (req, res) => {
   const b = parse(TicketIn, req.body);
   if (b.kind === 'p2h' && !b.id) throw badRequest('Nomor P2H diperlukan.');
   if (b.kind === 'pmmr' && b.format !== 'xlsx') throw badRequest('Rekap PMMR hanya tersedia dalam format Excel.');
@@ -47,7 +48,7 @@ r.post('/ticket', requireAuth, async (req, res) => {
 });
 
 /** Ringkasan rekap untuk layar (mingguan / bulanan / tahunan) sebelum diunduh. */
-r.get('/rekap-preview', requireAuth, async (req, res) => {
+r.get('/rekap-preview', requireAuth, requireForm(GENSET_CODE), async (req, res) => {
   res.json(await rekapPreview(req.query, req.user));
 });
 
@@ -59,11 +60,17 @@ r.get('/file', async (req, res) => {
     throw unauthorized('Tautan unduhan sudah kedaluwarsa. Kembali ke aplikasi lalu unduh lagi.');
   }
   if (p.typ !== 'export') throw unauthorized();
-  const u = (await query('SELECT id, role, site_id, is_active FROM users WHERE id = $1', [p.uid])).rows[0];
+  const u = (await query('SELECT id, role, site_id, is_active, form_access FROM users WHERE id = $1', [p.uid])).rows[0];
   if (!u?.is_active) throw unauthorized();
 
+  // hak akses form bisa dicabut sesudah tiket dibuat: cek lagi saat diunduh
+  if (!canUseForm(u, p.kind === 'form_rekap' ? p.code : GENSET_CODE)) throw forbidden('Akun Anda tidak diberi akses ke form ini. Hubungi admin.');
+
   let out;
-  if (p.kind === 'p2h') {
+  if (p.kind === 'form_rekap') {
+    out = await FORM_REKAP_BUILD[p.format](p.code, p.filters || {}, u);
+    if (!out) throw notFound('Jenis form tidak ditemukan.');
+  } else if (p.kind === 'p2h') {
     const scope = scopeOf(u);
     if (scope != null) {
       const f = (await query('SELECT site_id FROM p2h_forms WHERE id = $1', [p.id])).rows[0];

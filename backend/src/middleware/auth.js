@@ -9,7 +9,7 @@ export const CAN_SIGN = ['pengawas', 'teknisi_pengawas', 'admin']; // boleh memv
 export const CAN_FIX = ['teknisi', 'pengawas', 'teknisi_pengawas', 'admin']; // boleh memperbarui tindak lanjut temuan
 
 const USER_COLS = `id, nrp, name, role, site_id, company, job_title, phone, is_active, must_change_password,
-  token_version, notif_mode, notif_site_ids, notif_seen_id, (signature_png IS NOT NULL) AS has_signature`;
+  token_version, notif_mode, notif_site_ids, notif_seen_id, form_access, (signature_png IS NOT NULL) AS has_signature`;
 
 export function signToken(user) {
   return jwt.sign({ sub: user.id, tv: user.token_version }, config.jwtSecret, { expiresIn: config.jwtExpiresIn });
@@ -45,6 +45,18 @@ export const requireRole =
  */
 export const scopeOf = (u) => (u.role === 'admin' ? null : (u.site_id ?? -1));
 
+/** Kode P2H Genset di daftar hak akses form. */
+export const GENSET_CODE = 'p2h_genset';
+
+/** Boleh membuka form ini? Admin selalu boleh; form_access kosong (NULL) = semua form. */
+export const canUseForm = (u, code) => u.role === 'admin' || !Array.isArray(u.form_access) || u.form_access.includes(code);
+
+/** Tolak bila akun ini tidak diberi akses ke form itu (dipasang sesudah requireAuth). */
+export const requireForm = (code) => (req, _res, next) => {
+  if (!canUseForm(req.user, code)) throw forbidden('Akun Anda tidak diberi akses ke form ini. Hubungi admin.');
+  next();
+};
+
 /** Data pengguna yang aman dikirim ke HP. */
 export function publicUser(u, extra = {}) {
   return {
@@ -60,6 +72,7 @@ export function publicUser(u, extra = {}) {
     notif_mode: u.notif_mode,
     notif_site_ids: u.notif_site_ids ?? null,
     has_signature: !!u.has_signature,
+    form_access: u.role === 'admin' ? null : u.form_access ?? null,
     ...extra,
   };
 }

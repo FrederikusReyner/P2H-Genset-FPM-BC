@@ -55,8 +55,8 @@ export default function NotificationsPage() {
           );
           return (
             <li key={n.id} className={`note ${isNew ? 'is-new' : ''}`}>
-              {n.form_id ? (
-                <Link to={`/p2h/${n.form_id}`} className="note__row">
+              {n.path || n.form_id ? (
+                <Link to={n.path || `/p2h/${n.form_id}`} className="note__row">
                   {inner}
                 </Link>
               ) : (

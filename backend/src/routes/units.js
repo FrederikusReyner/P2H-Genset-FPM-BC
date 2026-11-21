@@ -2,14 +2,14 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query } from '../db.js';
 import { conflict, notFound } from '../errors.js';
-import { requireAuth, requireRole, scopeOf } from '../middleware/auth.js';
+import { requireAuth, requireRole, scopeOf, GENSET_CODE, requireForm } from '../middleware/auth.js';
 import { idParam, numOrNull, parse } from '../middleware/validate.js';
 import { audit } from '../services/audit.js';
 import { getSettings } from '../services/settings.js';
 import { currentShift } from '../time.js';
 
 const r = Router();
-r.use(requireAuth);
+r.use(requireAuth, requireForm(GENSET_CODE));
 
 /** Kunci butir cek yang sama walau daftar cek diubah nomornya. */
 export const ITEM_KEY = `COALESCE(a.item_id::text, a.section_code || ':' || a.item_no::text)`;

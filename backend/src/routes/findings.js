@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query, tx } from '../db.js';
 import { conflict, notFound, unprocessable } from '../errors.js';
-import { CAN_FIX, requireAuth, requireRole, scopeOf } from '../middleware/auth.js';
+import { CAN_FIX, requireAuth, requireRole, scopeOf, GENSET_CODE, requireForm } from '../middleware/auth.js';
 import { idParam, parse } from '../middleware/validate.js';
 import { audit } from '../services/audit.js';
 import { notifyEvent } from '../services/push.js';
@@ -11,7 +11,7 @@ import { notifyFixedGroup } from '../services/wa-report.js';
 import { plain } from '../text.js';
 
 const r = Router();
-r.use(requireAuth);
+r.use(requireAuth, requireForm(GENSET_CODE));
 
 const KEY = `COALESCE(a.item_id::text, a.section_code || ':' || a.item_no::text)`;
 

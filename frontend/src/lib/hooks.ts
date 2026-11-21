@@ -5,7 +5,7 @@ import { loadSnapshot, saveSnapshot } from './cache';
 import type { Dashboard, Finding, Meta, MonthlyItem, Notice, P2HListItem, RekapPreview, Unit } from './types';
 
 /** Ambil dari server; kalau tidak ada sinyal, pakai salinan terakhir yang tersimpan di HP. */
-async function withSnapshot<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+export async function withSnapshot<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
   try {
     const data = await fetcher();
     saveSnapshot(key, data);
@@ -29,8 +29,9 @@ export function useMeta() {
   });
 }
 
-export function useUnits() {
+export function useUnits(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: ['units'],
     queryFn: () => withSnapshot('units', () => api.get<{ items: Unit[]; shift: { shift_date: string; shift: 1 | 2 } }>('/api/units')),
     staleTime: 20_000,
@@ -49,8 +50,9 @@ export function useDashboard(date: string | null, shift: number | null) {
   });
 }
 
-export function useFindings(status: 'open' | 'closed', siteId?: number | null) {
+export function useFindings(status: 'open' | 'closed', siteId?: number | null, enabled = true) {
   return useQuery({
+    enabled,
     queryKey: ['findings', status, siteId ?? null],
     queryFn: () => api.get<{ items: Finding[] }>(`/api/findings${qs({ status, site_id: siteId })}`),
     placeholderData: keepPreviousData,

@@ -170,7 +170,12 @@ export async function downloadFile(body: {
   id?: number;
   filters?: Record<string, string | number>;
 }) {
-  const r = await api.post<{ path: string }>('/api/exports/ticket', body);
+  await openTicket('/api/exports/ticket', body);
+}
+
+/** Minta tiket di `ticketUrl` lalu buka alamat unduhan yang dikembalikan. */
+export async function openTicket(ticketUrl: string, body: unknown) {
+  const r = await api.post<{ path: string }>(ticketUrl, body);
   const url = API_BASE + r.path;
   const a = document.createElement('a');
   a.href = url;

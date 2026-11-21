@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query, tx } from '../db.js';
 import { AppError, conflict, forbidden, notFound, unprocessable } from '../errors.js';
-import { CAN_FILL, CAN_SIGN, requireAuth, requireRole, scopeOf } from '../middleware/auth.js';
+import { CAN_FILL, CAN_SIGN, requireAuth, requireRole, scopeOf, GENSET_CODE, requireForm } from '../middleware/auth.js';
 import { MAX_PHOTOS_PER_ITEM, assertPngDataUrl, decodePhoto, idParam, numOrNull, parse } from '../middleware/validate.js';
 import { cleanParams, PARAMS } from '../params.js';
 import { audit } from '../services/audit.js';
@@ -15,7 +15,7 @@ import { daysBetween, shiftLabel, wita } from '../time.js';
 import { loadChecklist } from './meta.js';
 
 const r = Router();
-r.use(requireAuth);
+r.use(requireAuth, requireForm(GENSET_CODE));
 
 const MAX_NEW_PHOTO_BYTES_PER_FORM = 12_000_000;
 

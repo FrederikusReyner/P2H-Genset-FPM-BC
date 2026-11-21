@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
-import { Confirm, DangerCode, Empty, ErrorBox, Field, PageHead, SectionTitle, Sheet, Spinner } from '../components/ui';
+import { Confirm, DangerCode, Empty, ErrorBox, Field, PageHead, SectionTitle, Segmented, Sheet, Spinner } from '../components/ui';
 import { ApiError, api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { ROLE_LABEL, ago, dateTime, segments } from '../lib/format';
+import { GENSET_CODE, useFormTypes } from '../lib/forms';
 import { useMeta } from '../lib/hooks';
 import { useToast } from '../lib/toast';
 import type { ChecklistSection, Role, Settings, UserRow, WhatsappStatus } from '../lib/types';
@@ -188,6 +189,9 @@ function UserSheet({
   onSaved: (cred?: { title: string; lines: { nrp: string; name: string; pw: string }[] }) => Promise<unknown>;
 }) {
   const toast = useToast();
+  const formTypes = useFormTypes();
+  const allForms = [{ code: GENSET_CODE, name: 'P2H Genset' }, ...(formTypes.data?.items ?? []).map((t) => ({ code: t.code, name: t.short_name }))];
+  const [access, setAccess] = useState<string[] | null>(null); // null = semua form
   const [f, setF] = useState({ nrp: '', name: '', company: '', role: 'teknisi' as Role, site_id: '' as string | number, job_title: '', phone: '', password: '', is_active: true });
   const [loaded, setLoaded] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
@@ -197,6 +201,7 @@ function UserSheet({
   if (target !== loaded) {
     setLoaded(target);
     setErr(null);
+    setAccess(target && target !== 'new' ? target.form_access ?? null : null);
     if (target === 'new') setF({ nrp: '', name: '', company: '', role: 'teknisi', site_id: sites[0]?.id ?? '', job_title: '', phone: '', password: '', is_active: true });
     else if (target) setF({ nrp: target.nrp, name: target.name, company: target.company ?? '', role: target.role, site_id: target.site_id ?? '', job_title: target.job_title ?? '', phone: target.phone ?? '', password: '', is_active: target.is_active });
   }
@@ -220,7 +225,13 @@ function UserSheet({
         company: f.company.trim() || null,
         job_title: f.job_title.trim() || null,
         phone: f.phone.trim() || null,
+        form_access: f.role === 'admin' ? null : access,
       };
+      if (access && access.length === 0 && f.role !== 'admin') {
+        setErr('Pilih minimal satu form, atau pilih Semua form.');
+        setBusy(false);
+        return;
+      }
       if (isNew) {
         const r = await api.post<{ item: UserRow; initial_password: string }>('/api/users', { nrp: f.nrp.trim(), ...common, password: f.password || undefined });
         toast.push({ title: 'Akun dibuat', tone: 'ok' });
@@ -319,6 +330,35 @@ function UserSheet({
               <input id="x-hp" className="input" inputMode="tel" value={f.phone} onChange={(e) => up('phone', e.target.value)} />
             </Field>
           </div>
+          {f.role !== 'admin' && (
+            <Field label="Akses form" hint="Form yang bisa dibuka akun ini. Pemberitahuan dan notifikasi HP juga hanya untuk form ini.">
+              <div className="stack accessbox">
+                <Segmented
+                  label="Akses form"
+                  value={access === null ? 'all' : 'some'}
+                  onChange={(v) => setAccess(v === 'all' ? null : access ?? allForms.map((x) => x.code))}
+                  options={[
+                    { value: 'all', label: 'Semua form' },
+                    { value: 'some', label: 'Pilih form' },
+                  ]}
+                />
+                {access !== null && (
+                  <div className="accessbox__list">
+                    {allForms.map((x) => (
+                      <label key={x.code} className="check">
+                        <input
+                          type="checkbox"
+                          checked={access.includes(x.code)}
+                          onChange={(e) => setAccess(e.target.checked ? [...access, x.code] : access.filter((c) => c !== x.code))}
+                        />
+                        <span>{x.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Field>
+          )}
           {isNew && (
             <Field label="Password awal (boleh kosong)" htmlFor="x-pw" hint="Kosong = dibuatkan otomatis. Orangnya wajib menggantinya saat masuk pertama kali.">
               <input id="x-pw" className="input mono" value={f.password} onChange={(e) => up('password', e.target.value)} autoComplete="off" />

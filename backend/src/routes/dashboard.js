@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { query } from '../db.js';
-import { requireAuth, scopeOf } from '../middleware/auth.js';
+import { requireAuth, scopeOf, GENSET_CODE, requireForm } from '../middleware/auth.js';
 import { getSettings } from '../services/settings.js';
 import { addDays, currentShift } from '../time.js';
 import { OPEN_FINDINGS_SQL } from './findings.js';
@@ -8,7 +8,7 @@ import { LIST_COLS } from './p2h.js';
 import { ITEM_KEY } from './units.js';
 
 const r = Router();
-r.use(requireAuth);
+r.use(requireAuth, requireForm(GENSET_CODE));
 
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s));
 

@@ -1,0 +1,597 @@
+/* =====================================================================
+   Form digital serbaguna: layar pilih form, ringkasan, isi, detail, kelola
+   ===================================================================== */
+
+.lintro {
+  margin: -6px 0 14px;
+  max-width: 70ch;
+}
+
+/* ---------- layar pilih form ---------- */
+.lcards {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+.lcard {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  height: 100%;
+  padding: 14px 14px 14px 18px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  overflow: hidden;
+  transition: transform 0.08s, border-color 0.12s;
+}
+.lcard::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--ok);
+}
+.lcard--warn::before {
+  background: var(--warn);
+}
+.lcard--stop::before {
+  background: repeating-linear-gradient(135deg, var(--stop) 0 5px, var(--frame) 5px 10px);
+}
+.lcard:hover {
+  transform: translateY(-1px);
+  border-color: var(--ink-2);
+}
+.lcard__icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r);
+  background: var(--frame);
+  color: var(--brand);
+}
+.lcard__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.lcard__title {
+  font-family: var(--font-cond);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.lcard__sub {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.lcard__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lcard__prog {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lcard__bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+.lcard__bar span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+.lcard__go {
+  align-self: center;
+  color: var(--muted);
+  flex: none;
+}
+
+/* ---------- ringkasan satu form ---------- */
+.kpis--form {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  margin-bottom: 18px;
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+.kpi--link:hover {
+  border-color: var(--ink-2);
+}
+.kpi__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.kpi__value {
+  font-family: var(--font-cond);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.05;
+}
+.kpi__of {
+  font-size: 20px;
+  color: var(--muted);
+}
+.kpi--stop {
+  background: var(--stop-bg);
+  border-color: var(--stop);
+}
+.kpi--stop .kpi__value {
+  color: var(--stop-ink);
+}
+.kpi--warn {
+  background: var(--warn-bg);
+  border-color: transparent;
+}
+.kpi--warn .kpi__value {
+  color: var(--warn-ink);
+}
+.fh-head {
+  margin: 4px 0 10px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.fh-search {
+  max-width: 320px;
+  flex: 1;
+}
+
+.slist,
+.hlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.srow,
+.hitem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px 10px 18px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  background: var(--surface);
+  overflow: hidden;
+}
+.hitem {
+  color: var(--ink);
+  text-decoration: none;
+}
+.hitem:hover {
+  border-color: var(--ink-2);
+}
+.srow__bar,
+.hitem__bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: var(--ok);
+}
+.srow--pending .srow__bar {
+  background: var(--idle);
+}
+.srow--warn .srow__bar,
+.hitem--warn .hitem__bar {
+  background: var(--warn);
+}
+.srow--stop .srow__bar,
+.hitem--stop .hitem__bar {
+  background: repeating-linear-gradient(135deg, var(--stop) 0 5px, var(--frame) 5px 10px);
+}
+.srow--stop {
+  border-color: var(--stop);
+}
+.srow__main,
+.hitem__main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+.srow__title,
+.hitem__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.srow__title b,
+.hitem__title b {
+  font-size: 16px;
+}
+.srow__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.srow__act,
+.hitem__side {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: none;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.dot--warn {
+  background: var(--warn);
+}
+.dot--stop {
+  background: var(--stop);
+}
+@media (max-width: 560px) {
+  .srow,
+  .hitem {
+    flex-wrap: wrap;
+  }
+  .srow__act,
+  .hitem__side {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+.ffilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.ffilters__date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ffilters .searchbox {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* ---------- isi form ---------- */
+.fsec__note {
+  margin-top: 2px;
+}
+.mgrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  margin-top: 8px;
+}
+.mgrid--many {
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 420px) {
+  .mgrid--many {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.mcell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.mcell__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.mcell__in {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mcell__in .input {
+  min-width: 0;
+  width: 100%;
+}
+.mcell__unit {
+  font-size: 12.5px;
+  color: var(--muted);
+  flex: none;
+}
+.mcell.is-out .input {
+  border-color: var(--warn);
+  background: var(--warn-bg);
+}
+.fplan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- detail ---------- */
+.hdl {
+  display: grid;
+  gap: 10px 18px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  margin: 0;
+}
+.hdl dt {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.hdl dd {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+}
+.hdl--wide {
+  grid-column: 1 / -1;
+}
+.mvals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.mval {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  min-width: 74px;
+}
+.mval i {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+}
+.mval.is-out {
+  border-color: var(--warn);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+.printhead {
+  display: none;
+}
+
+/* ---------- kelola ---------- */
+.fmanage .fcard {
+  margin-bottom: 14px;
+}
+.table tr.is-off td {
+  opacity: 0.55;
+}
+.mansec {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.mansec__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.manitems {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+.manitems li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--line);
+}
+.manitems li.is-off {
+  opacity: 0.55;
+}
+.manitems__no {
+  width: 36px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.manitems__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* ---------- cetak (Cetak / PDF di halaman detail) ---------- */
+@media print {
+  .topbar,
+  .rail,
+  .bottomnav,
+  .noprint,
+  .main > .banner {
+    display: none !important;
+  }
+  .shell,
+  .body,
+  .main {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .printhead {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #000;
+  }
+  .card,
+  .dsec,
+  .sign {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+  .drow {
+    break-inside: avoid;
+  }
+}
+
+/* ---------- saringan site (admin) ---------- */
+.sitechips {
+  margin: 0 0 14px;
+}
+.sitechips__n {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--line);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.fchip.is-on .sitechips__n {
+  background: rgba(255, 255, 255, 0.25);
+}
+.upick .sitechips {
+  margin-bottom: 8px;
+}
+
+
+/* ---------- akses form di editor pengguna ---------- */
+.accessbox__list {
+  display: grid;
+  gap: 4px 16px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+
+
+/* ---------- rekap / dashboard form ---------- */
+.frekap__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.kpis--rekap {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+.kpi--ring {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.frekap__grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 980px) {
+  .frekap__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .frekap__wide {
+    grid-column: 1 / -1;
+  }
+}
+.frekap__grid > .card {
+  min-width: 0;
+}
+.fbar--ok {
+  fill: var(--ok);
+}
+.fbar--warn {
+  fill: var(--warn);
+}
+.fbar--stop {
+  fill: var(--stop);
+}
+.fkey {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+.fkey--ok {
+  background: var(--ok);
+}
+.fkey--warn {
+  background: var(--warn);
+}
+.fkey--stop {
+  background: var(--stop);
+}
+.ring__track {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 6;
+}
+.ring__val {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: butt;
+}
+.ring__val--ok {
+  stroke: var(--ok);
+}
+.ring__val--warn {
+  stroke: var(--warn);
+}
+.ring__val--stop {
+  stroke: var(--stop);
+}
+
+/* ---------- grup WhatsApp per form (Kelola) ---------- */
+.fwa {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+}
+.fwa__head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}

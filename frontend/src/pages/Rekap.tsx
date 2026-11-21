@@ -1,30 +1,20 @@
 import { useState } from 'react';
 import { Icon } from '../components/Icon';
 import { PmmrCard } from '../components/Pmmr';
+import { Link } from 'react-router-dom';
+import { ComplianceChart, FindingBars, ResultTrend, Ring } from '../components/FormCharts';
 import { DownloadMenu, Empty, ErrorBox, PageHead, SectionTitle, Segmented, Spinner } from '../components/ui';
 import { downloadFile } from '../lib/api';
-import { PERIOD_LABEL, periodStart, periodText, stepAnchor, todayWita, type Period } from '../lib/format';
+import { PERIOD_LABEL, periodStart, periodText, span, stepAnchor, todayWita, type Period } from '../lib/format';
 import { useMeta, useRekapPreview } from '../lib/hooks';
 import { useToast } from '../lib/toast';
-import type { RekapRow } from '../lib/types';
+import type { RekapPreview } from '../lib/types';
 
 /* =====================================================================
    Rekap mingguan / bulanan / tahunan: lihat ringkasan di layar, lalu unduh PDF / Excel / Word
    ===================================================================== */
 
 const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : '–');
-
-function Bar({ r }: { r: RekapRow }) {
-  if (!r.total) return <span className="rbar" aria-hidden="true" />;
-  const w = (n: number) => `${(n / r.total) * 100}%`;
-  return (
-    <span className="rbar" role="img" aria-label={`${r.baik} baik, ${r.temuan} temuan A, ${r.stop} STOP AA`}>
-      <i className="b-ok" style={{ width: w(r.baik) }} />
-      <i className="b-warn" style={{ width: w(r.temuan) }} />
-      <i className="b-stop" style={{ width: w(r.stop) }} />
-    </span>
-  );
-}
 
 export default function RekapPage() {
   const toast = useToast();
@@ -60,7 +50,6 @@ export default function RekapPage() {
         <DownloadMenu onPick={download} label="Unduh rekap" busy={dl} disabled={!d || d.sum.total === 0} />
       </PageHead>
 
-      <PmmrCard />
 
       <section className="card rekap__ctrl" aria-label="Pilih periode">
         <Segmented<Period>
@@ -111,126 +100,145 @@ export default function RekapPage() {
 
       {d && d.sum.total === 0 && <Empty icon="table" title="Belum ada P2H pada periode ini" hint="Pilih periode lain dengan tombol panah di atas." />}
 
-      {d && d.sum.total > 0 && (
-        <>
-          <div className="rtiles">
-            <div className="rtile">
-              <span className="rtile__label">Total P2H</span>
-              <span className="rtile__value">{d.sum.total}</span>
-              <span className="rtile__note">{d.sum.expected ? `dari perkiraan ${d.sum.expected}` : ' '}</span>
-            </div>
-            <div className="rtile rtile--ok">
-              <span className="rtile__label">Semua baik</span>
-              <span className="rtile__value">{d.sum.baik}</span>
-              <span className="rtile__note">{pct(d.sum.baik, d.sum.total)} dari P2H</span>
-            </div>
-            <div className="rtile rtile--warn">
-              <span className="rtile__label">Ada temuan (A)</span>
-              <span className="rtile__value">{d.sum.temuan}</span>
-              <span className="rtile__note">perbaiki ≤ 12 jam</span>
-            </div>
-            <div className="rtile rtile--stop">
-              <span className="rtile__label">STOP (AA)</span>
-              <span className="rtile__value">{d.sum.stop}</span>
-              <span className="rtile__note">tidak boleh jalan</span>
-            </div>
-            <div className="rtile rtile--ok">
-              <span className="rtile__label">Terverifikasi</span>
-              <span className="rtile__value">{d.sum.verified}</span>
-              <span className="rtile__note">sudah ditandatangani pengawas</span>
-            </div>
-            <div className="rtile">
-              <span className="rtile__label">Menunggu verifikasi</span>
-              <span className="rtile__value">{d.sum.unverified}</span>
-              <span className="rtile__note">belum diperiksa pengawas</span>
-            </div>
-            <div className="rtile">
-              <span className="rtile__label">Kepatuhan</span>
-              <span className="rtile__value">{d.sum.compliance == null ? '–' : `${d.sum.compliance}%`}</span>
-              <span className="rtile__note">perkiraan</span>
-            </div>
-            <div className="rtile">
-              <span className="rtile__label">Temuan</span>
-              <span className="rtile__value">{d.findings.total}</span>
-              <span className="rtile__note">
-                AA {d.findings.aa} · A {d.findings.a} · selesai {d.findings.closed}
-              </span>
+      {d && d.sum.total > 0 && <RekapDashboard d={d} />}
+
+      <PmmrCard />
+    </div>
+  );
+}
+
+const ringTone = (p: number | null) => (p == null ? 'warn' : p >= 100 ? 'ok' : p >= 50 ? 'warn' : 'stop');
+
+/** Isi rekap bergaya dashboard: sama dengan Rekap form digital lain. */
+function RekapDashboard({ d }: { d: RekapPreview }) {
+  const s = d.sum;
+  const f = d.findings;
+  const pctFinding = s.total ? Math.round(((s.temuan + s.stop) / s.total) * 100) : 0;
+  const pctVerified = s.total ? Math.round((s.verified / s.total) * 100) : 0;
+  const open = f.total - f.closed;
+  const unit = d.bucket_unit.toLowerCase();
+  const kind = d.bucket_kind;
+  const trend = d.buckets.map((b) => ({ start: b.start, ok: b.baik, finding: b.temuan, stop: b.stop }));
+  const comp = d.buckets.filter((b) => b.expected > 0).map((b) => ({ start: b.start, done: b.total, expected: b.expected, pct: b.pct ?? 0 }));
+
+  return (
+    <>
+      <section className="kpis kpis--form kpis--rekap">
+        <div className="kpi">
+          <div className="kpi__label">Total P2H</div>
+          <div className="kpi__value">{s.total}</div>
+          <div className="small muted">{s.expected ? `dari perkiraan ${s.expected}` : 'P2H masuk'}</div>
+        </div>
+        <div className="kpi kpi--ring">
+          <Ring pct={s.compliance ?? 0} tone={ringTone(s.compliance)} />
+          <div>
+            <div className="kpi__label">Kepatuhan</div>
+            <div className="kpi__value">{s.compliance == null ? '–' : `${s.compliance}%`}</div>
+            <div className="small muted">perkiraan</div>
+          </div>
+        </div>
+        <div className={`kpi kpi--ring ${pctFinding ? 'kpi--warn' : ''}`}>
+          <Ring pct={pctFinding} tone={s.stop ? 'stop' : pctFinding ? 'warn' : 'ok'} />
+          <div>
+            <div className="kpi__label">Ada temuan</div>
+            <div className="kpi__value">{pctFinding}%</div>
+            <div className="small muted">
+              {s.temuan} temuan A · {s.stop} STOP AA
             </div>
           </div>
-
-          <section className="card tablecard">
-            <div className="tablecard__head">
-              <SectionTitle hint="Warna: hijau semua baik, kuning ada temuan A, merah STOP (AA)">Per {d.bucket_unit.toLowerCase()}</SectionTitle>
+        </div>
+        <Link to="/temuan" className={`kpi kpi--link ${open && f.aa ? 'kpi--stop' : open ? 'kpi--warn' : ''}`}>
+          <div className="kpi__label">Temuan</div>
+          <div className="kpi__value">{f.total}</div>
+          <div className="small muted">
+            AA {f.aa} · A {f.a} · belum selesai {open}
+          </div>
+        </Link>
+        <div className="kpi">
+          <div className="kpi__label">Temuan selesai</div>
+          <div className="kpi__value">{f.closed}</div>
+          <div className="small muted">{s.close_hours != null ? `rata-rata ${span(s.close_hours)}` : 'belum ada'}</div>
+        </div>
+        <Link to={`/p2h?belumverifikasi=1&dari=${d.from ?? ""}&sampai=${d.to ?? ""}`} className="kpi kpi--link kpi--ring">
+          <Ring pct={pctVerified} tone={ringTone(pctVerified)} />
+          <div>
+            <div className="kpi__label">Terverifikasi</div>
+            <div className="kpi__value">{pctVerified}%</div>
+            <div className="small muted">
+              {s.unverified} menunggu{s.verify_hours != null ? ` · rata-rata ${span(s.verify_hours)}` : ''}
             </div>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{d.bucket_unit}</th>
-                  <th className="num">P2H</th>
-                  <th className="hide-on-phone num">Baik</th>
-                  <th className="hide-on-phone num">Temuan A</th>
-                  <th className="hide-on-phone num">STOP AA</th>
-                  <th className="hide-on-phone num">Terverifikasi</th>
-                  <th>Gambaran</th>
-                </tr>
-              </thead>
-              <tbody>
-                {d.buckets.map((b) => (
-                  <tr key={b.label}>
-                    <td>{b.label}</td>
-                    <td className="num mono">{b.total}</td>
-                    <td className="hide-on-phone num mono">{b.baik}</td>
-                    <td className="hide-on-phone num mono">{b.temuan}</td>
-                    <td className="hide-on-phone num mono">{b.stop}</td>
-                    <td className="hide-on-phone num mono">{b.verified}</td>
-                    <td>
-                      <Bar r={b} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
+          </div>
+        </Link>
+      </section>
 
-          {d.sites.length > 1 && (
-            <section className="card tablecard">
-              <div className="tablecard__head">
-                <SectionTitle>Per site</SectionTitle>
-              </div>
-              <table className="table">
+      <div className="frekap__grid">
+        <section className="card fcard">
+          <SectionTitle hint={`Jumlah P2H per ${unit}, menurut hasilnya.`}>Tren P2H</SectionTitle>
+          <ResultTrend data={trend} kind={kind} />
+        </section>
+        <section className="card fcard">
+          <SectionTitle hint={`P2H masuk dibanding perkiraan (genset jalan / standby × shift) per ${unit}.`}>Kepatuhan P2H</SectionTitle>
+          {comp.length ? <ComplianceChart items={comp} kind={kind} unit="P2H" /> : <div className="small muted">Belum ada shift yang berjalan di periode ini.</div>}
+        </section>
+
+        <section className="card fcard">
+          <SectionTitle hint="Butir cek yang paling sering rusak / perlu diperbaiki.">Butir paling sering bermasalah</SectionTitle>
+          <FindingBars
+            empty="Tidak ada temuan pada periode ini."
+            rows={d.top_items.map((x) => ({
+              key: `${x.section_title}|${x.item_text}`,
+              label: x.item_text.replace(/\*\*/g, ''),
+              sub: x.section_title,
+              stop: x.has_stop ? x.n : 0,
+              fix: x.has_stop ? 0 : x.n,
+              tip: `di ${x.units} unit`,
+            }))}
+          />
+        </section>
+        <section className="card fcard">
+          <SectionTitle hint="Genset dengan temuan terbanyak.">Temuan per unit</SectionTitle>
+          <FindingBars
+            empty="Tidak ada temuan pada periode ini."
+            rows={d.units.filter((x) => x.stop + x.fix > 0).map((x) => ({ key: x.id, label: x.name, sub: x.site_name, stop: x.stop, fix: x.fix, tip: `${x.total} P2H` }))}
+          />
+        </section>
+
+        {d.sites.length > 1 && (
+          <section className="card fcard frekap__wide">
+            <SectionTitle hint="Jumlah P2H tiap site, menurut hasilnya.">Per site</SectionTitle>
+            <div className="tableview__scroll">
+              <table className="table table--tight">
                 <thead>
                   <tr>
                     <th>Site</th>
                     <th className="num">P2H</th>
-                    <th className="hide-on-phone num">Baik</th>
-                    <th className="hide-on-phone num">Temuan A</th>
-                    <th className="hide-on-phone num">STOP AA</th>
-                    <th>Gambaran</th>
+                    <th className="num">Baik</th>
+                    <th className="num">Temuan A</th>
+                    <th className="num">STOP AA</th>
+                    <th className="num">Terverifikasi</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {d.sites.map((s) => (
-                    <tr key={s.site}>
-                      <td>{s.site}</td>
-                      <td className="num mono">{s.total}</td>
-                      <td className="hide-on-phone num mono">{s.baik}</td>
-                      <td className="hide-on-phone num mono">{s.temuan}</td>
-                      <td className="hide-on-phone num mono">{s.stop}</td>
-                      <td>
-                        <Bar r={s} />
-                      </td>
+                  {d.sites.map((x) => (
+                    <tr key={x.site}>
+                      <td>{x.site}</td>
+                      <td className="num">{x.total}</td>
+                      <td className="num">{x.baik}</td>
+                      <td className="num">{x.temuan ? <span className="warn-text">{x.temuan}</span> : 0}</td>
+                      <td className="num">{x.stop ? <span className="stop-text">{x.stop}</span> : 0}</td>
+                      <td className="num">{pct(x.verified, x.total)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </section>
-          )}
+            </div>
+          </section>
+        )}
+      </div>
 
-          <p className="small muted">
-            Kepatuhan (perkiraan) = P2H yang masuk dibanding jumlah genset jalan / standby saat ini × shift yang sudah mulai. Unduh PDF, Excel, atau Word untuk daftar lengkap P2H dan temuan pada periode ini.
-          </p>
-        </>
-      )}
-    </div>
+      <p className="small muted">
+        Kepatuhan (perkiraan) = P2H yang masuk dibanding jumlah genset jalan / standby saat ini × shift yang sudah mulai. Unduh PDF, Excel, atau Word untuk grafik ini beserta daftar lengkap P2H dan temuan.
+      </p>
+    </>
   );
 }

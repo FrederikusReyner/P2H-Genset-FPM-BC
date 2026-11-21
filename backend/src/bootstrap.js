@@ -3,6 +3,7 @@ import path from 'node:path';
 import bcrypt from 'bcryptjs';
 import { config } from './config.js';
 import { query, tx } from './db.js';
+import { seedForms } from './forms/bootstrap.js';
 import { migrate } from './migrate.js';
 import { DEFAULT_SETTINGS } from './services/settings.js';
 
@@ -212,5 +213,6 @@ export async function bootstrap(log = console.log) {
   await seedChecklist(log);
   await seedUnits(log);
   await seedPmmr(log);
+  await seedForms(log);
   await seedAdmin(log);
 }

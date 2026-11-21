@@ -26,7 +26,7 @@ const LoginIn = z.object({
 });
 
 const FULL_USER = `SELECT id, nrp, name, role, site_id, company, job_title, phone, password_hash, signature_png,
-  notif_mode, notif_site_ids, is_active, must_change_password, token_version,
+  notif_mode, notif_site_ids, is_active, must_change_password, token_version, form_access,
   (signature_png IS NOT NULL) AS has_signature FROM users`;
 
 r.post('/login', loginLimiter, async (req, res) => {

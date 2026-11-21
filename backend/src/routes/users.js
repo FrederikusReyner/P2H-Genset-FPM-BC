@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { query, tx } from '../db.js';
 import { AppError, conflict, notFound } from '../errors.js';
-import { ROLES, requireAuth, requireRole } from '../middleware/auth.js';
+import { GENSET_CODE, ROLES, requireAuth, requireRole } from '../middleware/auth.js';
 import { idParam, parse } from '../middleware/validate.js';
 import { audit } from '../services/audit.js';
 
@@ -25,7 +25,16 @@ async function assertSite(role, siteId) {
   if (!ok.rowCount) throw new AppError(422, 'validation', 'site: site tidak dikenal.');
 }
 
-const COLS = `id, nrp, name, role, site_id, company, job_title, phone, is_active, must_change_password,
+/** Daftar akses form: null = semua form; selain itu hanya kode yang dikenal (P2H Genset + form digital). */
+async function cleanAccess(role, list) {
+  if (role === 'admin' || list == null) return null;
+  const known = new Set([GENSET_CODE, ...(await query('SELECT code FROM form_types')).rows.map((x) => x.code)]);
+  const bad = list.filter((c) => !known.has(c));
+  if (bad.length) throw new AppError(422, 'validation', `form_access: form tidak dikenal (${bad.join(', ')})`);
+  return [...new Set(list)];
+}
+
+const COLS = `id, nrp, name, role, site_id, company, job_title, phone, is_active, must_change_password, form_access,
   last_login_at, created_at, (signature_png IS NOT NULL) AS has_signature,
   (SELECT count(*)::int FROM push_subscriptions ps WHERE ps.user_id = users.id) AS devices`;
 
@@ -43,6 +52,7 @@ const UserIn = z.object({
   job_title: z.string().trim().max(60).nullable().optional(),
   phone: z.string().trim().max(30).nullable().optional(),
   password: z.string().min(5).max(100).optional(),
+  form_access: z.array(z.string().max(40)).max(60).nullable().optional(),
 });
 
 r.post('/', async (req, res) => {
@@ -53,9 +63,9 @@ r.post('/', async (req, res) => {
   const password = b.password || randomPassword();
   const hash = await bcrypt.hash(password, 10);
   const { rows } = await query(
-    `INSERT INTO users (nrp, name, password_hash, role, site_id, company, job_title, phone, must_change_password)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true) RETURNING ${COLS}`,
-    [b.nrp, b.name, hash, b.role, b.role === 'admin' ? null : b.site_id, b.company || null, b.job_title || null, b.phone || null],
+    `INSERT INTO users (nrp, name, password_hash, role, site_id, company, job_title, phone, must_change_password, form_access)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,$9) RETURNING ${COLS}`,
+    [b.nrp, b.name, hash, b.role, b.role === 'admin' ? null : b.site_id, b.company || null, b.job_title || null, b.phone || null, await cleanAccess(b.role, b.form_access)],
   );
   await audit(null, req.user, 'user.create', 'user', rows[0].id, { nrp: b.nrp, role: b.role });
   res.status(201).json({ item: rows[0], initial_password: password });
@@ -69,6 +79,7 @@ const UserUpdate = z.object({
   job_title: z.string().trim().max(60).nullable().optional(),
   phone: z.string().trim().max(30).nullable().optional(),
   is_active: z.boolean(),
+  form_access: z.array(z.string().max(40)).max(60).nullable().optional(),
 });
 
 r.put('/:id', async (req, res) => {
@@ -80,13 +91,17 @@ r.put('/:id', async (req, res) => {
   }
   const { rows } = await query(
     `UPDATE users SET name = $2, role = $3, site_id = $4, company = $5, job_title = $6, phone = $7, is_active = $8,
+            form_access = CASE WHEN $9::boolean THEN $10::text[] ELSE form_access END,
             token_version = CASE WHEN $8 = false OR role <> $3 OR site_id IS DISTINCT FROM $4 THEN token_version + 1 ELSE token_version END,
             updated_at = now()
       WHERE id = $1 RETURNING ${COLS}`,
-    [id, b.name, b.role, b.role === 'admin' ? null : b.site_id, b.company || null, b.job_title || null, b.phone || null, b.is_active],
+    [
+      id, b.name, b.role, b.role === 'admin' ? null : b.site_id, b.company || null, b.job_title || null, b.phone || null, b.is_active,
+      b.form_access !== undefined || b.role === 'admin', await cleanAccess(b.role, b.form_access ?? null),
+    ],
   );
   if (!rows[0]) throw notFound('Pengguna tidak ditemukan.');
-  await audit(null, req.user, 'user.update', 'user', id, { role: b.role, is_active: b.is_active });
+  await audit(null, req.user, 'user.update', 'user', id, { role: b.role, is_active: b.is_active, form_access: b.form_access });
   res.json({ item: rows[0] });
 });
 

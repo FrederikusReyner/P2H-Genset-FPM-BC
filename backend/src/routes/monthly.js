@@ -2,14 +2,14 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { query, tx } from '../db.js';
 import { notFound, unprocessable } from '../errors.js';
-import { CAN_SIGN, requireAuth, requireRole, scopeOf } from '../middleware/auth.js';
+import { CAN_SIGN, requireAuth, requireRole, scopeOf, GENSET_CODE, requireForm } from '../middleware/auth.js';
 import { numOrNull, parse } from '../middleware/validate.js';
 import { audit } from '../services/audit.js';
 import { loadPmmrData } from '../services/pmmr/data.js';
 
 const r = Router();
 // halaman "Data bulanan" untuk pengawas, teknisi & pengawas, dan admin (hanya site-nya; admin semua site)
-r.use(requireAuth, requireRole(...CAN_SIGN));
+r.use(requireAuth, requireForm(GENSET_CODE), requireRole(...CAN_SIGN));
 
 const Period = z.object({
   year: z.coerce.number().int().min(2000).max(2100),

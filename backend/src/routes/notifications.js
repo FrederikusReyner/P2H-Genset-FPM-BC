@@ -17,13 +17,14 @@ r.use(requireAuth);
 
 // pemberitahuan yang boleh dilihat pengguna ini (sesuai pilihan site & jenis)
 const VISIBLE = `(n.site_id IS NULL OR (u.role = 'admin' AND (u.notif_site_ids IS NULL OR n.site_id = ANY (u.notif_site_ids))) OR (u.role <> 'admin' AND n.site_id = u.site_id))
-  AND (u.notif_mode = 'all' OR n.kind IN ('p2h_stop','p2h_finding','finding_closed'))`;
+  AND (u.notif_mode = 'all' OR n.kind IN ('p2h_stop','p2h_finding','finding_closed','form_stop','form_finding','form_closed'))
+  AND (u.role = 'admin' OR u.form_access IS NULL OR n.form_code IS NULL OR n.form_code = ANY (u.form_access))`;
 
 r.get('/', async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 40, 1), 100);
   const [list, unread] = await Promise.all([
     query(
-      `SELECT n.id, n.kind, n.severity, n.title, n.body, n.site_id, n.unit_id, n.form_id, n.created_at,
+      `SELECT n.id, n.kind, n.severity, n.title, n.body, n.site_id, n.unit_id, n.form_id, n.path, n.created_at,
               (n.actor_user_id IS NOT NULL AND n.actor_user_id = u.id) AS mine
          FROM notifications n, users u
         WHERE u.id = $1 AND ${VISIBLE}
