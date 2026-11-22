@@ -49,18 +49,22 @@ export async function compressImage(file: File): Promise<string> {
 
 /* ---------- foto yang sudah ada di server ---------- */
 
-const blobCache = new Map<number, Promise<string>>();
+const blobCache = new Map<string, Promise<string>>();
 
-/** Alamat gambar (blob) untuk foto nomor `id`. Hasilnya disimpan supaya tidak diunduh berulang. */
-export function photoBlobUrl(id: number): Promise<string> {
-  let p = blobCache.get(id);
+/**
+ * Alamat gambar (blob) untuk foto nomor `id`. Hasilnya disimpan supaya tidak diunduh berulang.
+ * base: '/api/photos' (P2H Genset) atau '/api/forms/photos' (form digital lain).
+ */
+export function photoBlobUrl(id: number, base = '/api/photos'): Promise<string> {
+  const key = `${base}/${id}`;
+  let p = blobCache.get(key);
   if (!p) {
-    p = fetch(`${API_BASE}/api/photos/${id}`, { headers: { Authorization: `Bearer ${getToken() ?? ''}` } }).then(async (r) => {
+    p = fetch(`${API_BASE}${key}`, { headers: { Authorization: `Bearer ${getToken() ?? ''}` } }).then(async (r) => {
       if (!r.ok) throw new Error('Foto tidak bisa dimuat.');
       return URL.createObjectURL(await r.blob());
     });
-    p.catch(() => blobCache.delete(id));
-    blobCache.set(id, p);
+    p.catch(() => blobCache.delete(key));
+    blobCache.set(key, p);
   }
   return p;
 }

@@ -26,11 +26,11 @@ export const pushReady = () => ready;
  *  - isFinding: true untuk temuan / STOP / selesai diperbaiki (tetap dikirim ke yang memilih "hanya temuan")
  *  - actorUserId: pembuat kejadian (tidak dikirimi notifikasi, dia sudah tahu)
  */
-export async function notifyEvent({ kind, severity, title, body, siteId, unitId, formId, actorUserId, isFinding, path }) {
+export async function notifyEvent({ kind, severity, title, body, siteId, unitId, formId, actorUserId, isFinding, path, formCode = 'p2h_genset' }) {
   const { rows } = await query(
-    `INSERT INTO notifications (kind, severity, title, body, site_id, unit_id, form_id, actor_user_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, created_at`,
-    [kind, severity, title, body, siteId ?? null, unitId ?? null, formId ?? null, actorUserId ?? null],
+    `INSERT INTO notifications (kind, severity, title, body, site_id, unit_id, form_id, actor_user_id, path, form_code)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id, created_at`,
+    [kind, severity, title, body, siteId ?? null, unitId ?? null, formId ?? null, actorUserId ?? null, path ?? null, formCode],
   );
   const notif = rows[0];
   if (!ready) return { id: notif.id, sent: 0 };
@@ -42,8 +42,9 @@ export async function notifyEvent({ kind, severity, title, body, siteId, unitId,
       WHERE u.is_active
         AND ($1::int IS NULL OR u.id <> $1)
         AND ($2::int IS NULL OR (u.role = 'admin' AND (u.notif_site_ids IS NULL OR $2 = ANY (u.notif_site_ids))) OR (u.role <> 'admin' AND u.site_id = $2))
-        AND (u.notif_mode = 'all' OR $3::boolean)`,
-    [actorUserId ?? null, siteId ?? null, !!isFinding],
+        AND (u.notif_mode = 'all' OR $3::boolean)
+        AND (u.role = 'admin' OR u.form_access IS NULL OR $4 = ANY (u.form_access))`,
+    [actorUserId ?? null, siteId ?? null, !!isFinding, formCode],
   );
 
   const payload = JSON.stringify({

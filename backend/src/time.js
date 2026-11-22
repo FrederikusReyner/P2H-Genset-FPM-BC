@@ -115,8 +115,11 @@ export function weekdayIndex(dateStr) {
  * Rentang tanggal sebuah periode yang memuat tanggal `anchor`.
  *  - week : Senin sampai Minggu
  *  - month: tanggal 1 sampai akhir bulan
+ *  - biweek : blok 14 hari (Senin s.d. Minggu minggu berikutnya)
+ *  - quarter / half: kuartal (Jan-Mar, ...) / semester (Jan-Jun, Jul-Des)
  *  - year : 1 Januari sampai 31 Desember
  */
+export const BIWEEK_EPOCH = '2024-01-01';
 export function periodRange(period, anchor) {
   const [y, m] = anchor.split('-').map(Number);
   if (period === 'week') {
@@ -126,6 +129,19 @@ export function periodRange(period, anchor) {
   if (period === 'month') {
     const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
     return { from: `${y}-${pad2(m)}-01`, to: `${y}-${pad2(m)}-${pad2(last)}` };
+  }
+  if (period === 'biweek') {
+    // blok 14 hari mulai Senin, dihitung dari Senin 1 Januari 2024 (supaya blok sama di semua tempat)
+    const n = Math.floor(daysBetween(BIWEEK_EPOCH, anchor) / 14);
+    const from = addDays(BIWEEK_EPOCH, n * 14);
+    return { from, to: addDays(from, 13) };
+  }
+  if (period === 'quarter' || period === 'half') {
+    const len = period === 'quarter' ? 3 : 6;
+    const m1 = Math.floor((m - 1) / len) * len + 1;
+    const m2 = m1 + len - 1;
+    const last = new Date(Date.UTC(y, m2, 0)).getUTCDate();
+    return { from: `${y}-${pad2(m1)}-01`, to: `${y}-${pad2(m2)}-${pad2(last)}` };
   }
   return { from: `${y}-01-01`, to: `${y}-12-31` };
 }

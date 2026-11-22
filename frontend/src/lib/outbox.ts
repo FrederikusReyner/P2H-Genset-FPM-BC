@@ -1,4 +1,5 @@
-// Kotak keluar: P2H yang gagal terkirim karena sinyal hilang disimpan di HP dan dikirim ulang otomatis.
+// Kotak keluar: P2H / isian form yang gagal terkirim karena sinyal hilang disimpan di HP dan dikirim ulang otomatis
+// begitu ada sinyal lagi. Server mengenali kiriman ulang lewat uuid-nya, jadi tidak akan tercatat dua kali.
 import { createStore, del, get, set } from 'idb-keyval';
 import { ApiError, api } from './api';
 import type { P2HPayload } from './types';
@@ -8,8 +9,14 @@ const KEY = 'queue';
 
 export interface OutboxItem {
   uuid: string;
-  payload: P2HPayload;
+  payload: P2HPayload | Record<string, unknown>;
   label: string; // mis. "BC-GE-P-31 · Shift II · 30 Sep"
+  /** alamat kirim; kosong = P2H Genset (/api/p2h) */
+  url?: string;
+  /** kode form digital (untuk menyegarkan datanya setelah terkirim) */
+  form_code?: string;
+  /** akun yang mengisi: hanya dikirim saat akun itu yang masuk (HP bisa dipakai bergantian) */
+  user_id?: number;
   created_at: number;
   tries: number;
   /** bila diisi: tidak bisa dikirim otomatis, butuh tindakan orang (mis. unit itu sudah di-P2H oleh orang lain) */
@@ -59,7 +66,7 @@ export async function removeFromOutbox(uuid: string) {
 }
 
 /** Kirim semua yang menunggu. Berhenti begitu sinyal hilang lagi. Mengembalikan jumlah yang berhasil. */
-export async function flushOutbox(): Promise<{ sent: number; left: number }> {
+export async function flushOutbox(userId?: number): Promise<{ sent: number; left: number }> {
   if (flushing) return { sent: 0, left: (await read()).length };
   flushing = true;
   let sent = 0;
@@ -67,8 +74,9 @@ export async function flushOutbox(): Promise<{ sent: number; left: number }> {
     let items = await read();
     for (const it of items) {
       if (it.blocked) continue;
+      if (it.user_id != null && userId != null && it.user_id !== userId) continue;
       try {
-        await api.post('/api/p2h', it.payload, { timeout: 40_000 });
+        await api.post(it.url ?? '/api/p2h', it.payload, { timeout: 60_000 });
         items = items.filter((x) => x.uuid !== it.uuid);
         sent += 1;
         await write(items);

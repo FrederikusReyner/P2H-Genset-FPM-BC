@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon, type IconName } from './Icon';
-import { BrandLockup, MtlMark } from './ui';
+import { BrandLockup, Empty, MtlMark } from './ui';
 import { wakeServer } from '../lib/api';
 import { CAN_FILL, CAN_SIGN, useAuth } from '../lib/auth';
+import { GENSET_CODE, canUseForm, useFormTypes } from '../lib/forms';
 import { useFindings, useMeta, useNotices, useOnline, useSlowServer } from '../lib/hooks';
 import { flushOutbox, onOutboxChange, removeFromOutbox, type OutboxItem } from '../lib/outbox';
 import { syncPush } from '../lib/push';
@@ -29,9 +30,11 @@ export function AppShell() {
   const toast = useToast();
   const online = useOnline();
   const slow = useSlowServer();
-  const open = useFindings('open');
+  const gensetOk = canUseForm(user, GENSET_CODE);
+  const open = useFindings('open', null, gensetOk);
   const notices = useNotices();
   const meta = useMeta();
+  const formTypes = useFormTypes();
   const mySite = user && user.role !== 'admin' ? meta.data?.sites.find((s) => s.id === user.site_id)?.name : undefined;
   const [outbox, setOutbox] = useState<OutboxItem[]>([]);
   const [sw, setSw] = useState(swState());
@@ -58,15 +61,20 @@ export function AppShell() {
     void qc.invalidateQueries({ queryKey: ['notices'] });
     void qc.invalidateQueries({ queryKey: ['history'] });
     void qc.invalidateQueries({ queryKey: ['units'] });
+    void qc.invalidateQueries({ queryKey: ['forms'] });
+    void qc.invalidateQueries({ queryKey: ['form'] });
+    void qc.invalidateQueries({ queryKey: ['form-findings'] });
+    void qc.invalidateQueries({ queryKey: ['form-records'] });
+    void qc.invalidateQueries({ queryKey: ['form-stats'] });
   }, [qc]);
 
   const flush = useCallback(async () => {
-    const r = await flushOutbox();
+    const r = await flushOutbox(user?.id);
     if (r.sent > 0) {
-      toast.push({ title: `${r.sent} P2H terkirim`, body: 'Data yang tertunda sudah masuk ke server.', tone: 'ok' });
+      toast.push({ title: `${r.sent} isian terkirim`, body: 'Data yang tertunda (dikirim saat tanpa sinyal) sudah masuk ke server.', tone: 'ok' });
       refreshAll();
     }
-  }, [refreshAll, toast]);
+  }, [refreshAll, toast, user?.id]);
 
   useEffect(() => {
     wakeServer();
@@ -129,49 +137,82 @@ export function AppShell() {
         title: n.title,
         body: n.body,
         tone: n.severity === 'danger' ? 'danger' : n.severity === 'warn' ? 'warn' : n.severity === 'ok' ? 'ok' : 'info',
-        onClick: () => nav(n.form_id ? `/p2h/${n.form_id}` : '/temuan'),
+        onClick: () => nav(n.path || (n.form_id ? `/p2h/${n.form_id}` : '/temuan')),
       });
     }
     if (fresh.length) refreshAll();
   }, [notices.data, nav, refreshAll, toast]);
 
-  /* ---- menu ---- */
-  const items: NavDef[] = [
-    { to: '/', label: 'Beranda', icon: 'home', end: true },
+  /* ---- menu: menyesuaikan form yang sedang dibuka ---- */
+  const formCode = /^\/f\/([^/]+)/.exec(loc.pathname)?.[1] ?? null;
+  const formType = formCode ? formTypes.data?.items.find((t) => t.code === formCode) : undefined;
+  const mod: 'genset' | 'form' | 'home' = formCode
+    ? 'form'
+    : /^\/(genset|p2h|rekap|bulanan|temuan|unit|admin\/daftar-cek)(\/|$)/.test(loc.pathname)
+      ? 'genset'
+      : 'home';
+  const isAdmin = user?.role === 'admin';
+
+  const gensetItems: NavDef[] = [
+    { to: '/genset', label: 'Ringkasan', icon: 'home', end: true },
     ...(canFill ? [{ to: '/p2h/baru', label: 'P2H baru', icon: 'plus' as IconName }] : []),
     { to: '/p2h', label: 'Riwayat', icon: 'history', end: true },
     { to: '/rekap', label: 'Rekap', icon: 'chart' },
     ...(canSign ? [{ to: '/bulanan', label: 'Data bulanan', icon: 'table' as IconName }] : []),
     { to: '/temuan', label: 'Temuan', icon: 'alert', badge: openCount },
     { to: '/unit', label: 'Unit genset', icon: 'bolt' },
-    { to: '/akun', label: 'Akun saya', icon: 'user' },
+    ...(isAdmin ? [{ to: '/admin/daftar-cek', label: 'Daftar cek', icon: 'list' as IconName }] : []),
   ];
-  const admin: NavDef[] =
-    user?.role === 'admin'
-      ? [
-          { to: '/admin/pengguna', label: 'Pengguna', icon: 'users' },
-          { to: '/admin/daftar-cek', label: 'Daftar cek', icon: 'list' },
-          { to: '/admin/pengaturan', label: 'Pengaturan', icon: 'settings' },
-        ]
-      : [];
+  const fp = (rest = '') => `/f/${formCode}${rest}`;
+  const formOpen = (formType?.open_stop ?? 0) + (formType?.open_fix ?? 0);
+  const formItems: NavDef[] = formCode
+    ? [
+        { to: fp(), label: 'Ringkasan', icon: 'home', end: true },
+        ...(canFill ? [{ to: fp('/baru'), label: 'Isi baru', icon: 'plus' as IconName }] : []),
+        { to: fp('/riwayat'), label: 'Riwayat', icon: 'history' },
+        { to: fp('/rekap'), label: 'Rekap', icon: 'chart' },
+        { to: fp('/temuan'), label: 'Temuan', icon: 'alert', badge: formOpen },
+        ...(isAdmin ? [{ to: fp('/kelola'), label: 'Kelola', icon: 'settings' as IconName }] : []),
+      ]
+    : [];
+  const items: NavDef[] = [{ to: '/', label: 'Pilih form', icon: 'grid', end: true }];
+  const moduleItems = mod === 'genset' ? gensetItems : mod === 'form' ? formItems : [];
+  const moduleTitle = mod === 'genset' ? 'P2H Genset' : formType?.short_name ?? '';
+  const account: NavDef[] = [{ to: '/akun', label: 'Akun saya', icon: 'user' }];
+  const admin: NavDef[] = isAdmin
+    ? [
+        { to: '/admin/pengguna', label: 'Pengguna', icon: 'users' },
+        { to: '/admin/pengaturan', label: 'Pengaturan', icon: 'settings' },
+      ]
+    : [];
+  const moduleStop = mod === 'genset' ? openAA > 0 : (formType?.open_stop ?? 0) > 0;
 
-  const phoneItems = items.filter((i) => ['/', '/p2h', '/temuan', '/akun'].includes(i.to));
+  // menu bawah di HP: 4 tombol + tombol isi di tengah
+  const phoneItems: NavDef[] =
+    mod === 'genset'
+      ? [items[0], gensetItems[0], ...gensetItems.filter((i) => i.to === '/p2h' || i.to === '/temuan')]
+      : mod === 'form'
+        ? [items[0], formItems[0], ...formItems.filter((i) => i.to === fp('/riwayat') || i.to === fp('/temuan'))]
+        : [items[0], { to: '/notifikasi', label: 'Pemberitahuan', icon: 'bell', badge: unread }, ...account];
+  const fab = mod === 'genset' && canFill ? { to: '/p2h/baru', label: 'P2H' } : mod === 'form' && canFill ? { to: fp('/baru'), label: 'Isi' } : null;
   const half = Math.ceil(phoneItems.length / 2);
   const bottomLeft = phoneItems.slice(0, half);
   const bottomRight = phoneItems.slice(half);
+  const product = mod === 'genset' ? ['P2H', 'GENSET'] : mod === 'form' && formType ? [formType.short_name.split(' ')[0], formType.short_name.split(' ').slice(1).join(' ')] : ['FORM', 'DIGITAL'];
 
-  const pendingBlocked = outbox.filter((o) => o.blocked);
-  const pendingSend = outbox.filter((o) => !o.blocked);
+  const mine = outbox.filter((o) => o.user_id == null || o.user_id === user?.id);
+  const pendingBlocked = mine.filter((o) => o.blocked);
+  const pendingSend = mine.filter((o) => !o.blocked);
 
   return (
-    <div className="shell" data-focus={/^\/p2h\/baru$|\/ubah$/.test(loc.pathname) ? "true" : undefined}>
+    <div className="shell" data-focus={/\/baru$|\/ubah$/.test(loc.pathname) ? "true" : undefined}>
       <header className="topbar">
         <div className="topbar__in">
-          <NavLink to="/" className="topbar__brand" aria-label="Beranda P2H Genset">
+          <NavLink to="/" className="topbar__brand" aria-label="Pilih form">
             <BrandLockup reversed height={26} />
             <span className="topbar__sep" aria-hidden="true" />
             <span className="topbar__product">
-              P2H <b>GENSET</b>
+              {product[0]} <b>{product[1]?.toUpperCase()}</b>
             </span>
           </NavLink>
           <span className="grow" />
@@ -202,7 +243,33 @@ export function AppShell() {
                 <NavLink to={i.to} end={i.end} className={({ isActive }) => `rail__link ${isActive ? 'is-active' : ''}`}>
                   <Icon name={i.icon} size={20} />
                   <span>{i.label}</span>
-                  {!!i.badge && <span className={`badge ${openAA ? 'badge--stop' : 'badge--warn'}`}>{i.badge}</span>}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+          {moduleItems.length > 0 && (
+            <>
+              <div className="rail__group eyebrow">{moduleTitle}</div>
+              <ul>
+                {moduleItems.map((i) => (
+                  <li key={i.to}>
+                    <NavLink to={i.to} end={i.end} className={({ isActive }) => `rail__link ${isActive ? 'is-active' : ''}`}>
+                      <Icon name={i.icon} size={20} />
+                      <span>{i.label}</span>
+                      {!!i.badge && <span className={`badge ${moduleStop ? 'badge--stop' : 'badge--warn'}`}>{i.badge}</span>}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <div className="rail__group eyebrow">Akun</div>
+          <ul>
+            {account.map((i) => (
+              <li key={i.to}>
+                <NavLink to={i.to} className={({ isActive }) => `rail__link ${isActive ? 'is-active' : ''}`}>
+                  <Icon name={i.icon} size={20} />
+                  <span>{i.label}</span>
                 </NavLink>
               </li>
             ))}
@@ -252,7 +319,7 @@ export function AppShell() {
             <div className="banner banner--info" role="status">
               <Icon name="send" size={18} />
               <div className="grow">
-                <b>{pendingSend.length} P2H menunggu terkirim</b> ({pendingSend.map((p) => p.label).join('; ')}).
+                <b>{pendingSend.length} isian menunggu sinyal</b> ({pendingSend.map((p) => p.label).join('; ')}). Terkirim otomatis begitu ada sinyal.
               </div>
               <button type="button" className="btn btn--sm btn--dark" onClick={() => void flush()}>
                 Kirim sekarang
@@ -281,33 +348,41 @@ export function AppShell() {
               </button>
             </div>
           )}
-          <Outlet />
+          {(mod === 'genset' && !gensetOk) || (mod === 'form' && formCode && !canUseForm(user, formCode)) ? (
+            <Empty icon="lock" title="Akun Anda tidak diberi akses ke form ini" hint="Minta admin menambahkan form ini di menu Pengguna.">
+              <NavLink to="/" className="btn btn--dark">
+                Ke pilih form
+              </NavLink>
+            </Empty>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
 
-      <nav className="bottomnav" aria-label="Menu utama" style={{ ['--cols' as string]: phoneItems.length + (canFill ? 1 : 0) }}>
+      <nav className="bottomnav" aria-label="Menu utama" style={{ ['--cols' as string]: phoneItems.length + (fab ? 1 : 0) }}>
         {bottomLeft.map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end} className={({ isActive }) => `bn__link ${isActive ? 'is-active' : ''}`}>
             <span className="bn__icon">
               <Icon name={i.icon} size={22} />
-              {!!i.badge && <span className={`badge badge--dot ${openAA ? 'badge--stop' : 'badge--warn'}`}>{i.badge > 9 ? '9+' : i.badge}</span>}
+              {!!i.badge && <span className={`badge badge--dot ${moduleStop ? 'badge--stop' : 'badge--warn'}`}>{i.badge > 9 ? '9+' : i.badge}</span>}
             </span>
             <span>{i.label}</span>
           </NavLink>
         ))}
-        {canFill && (
-          <NavLink to="/p2h/baru" className={({ isActive }) => `bn__fab ${isActive ? 'is-active' : ''}`} aria-label="Isi P2H baru">
+        {fab && (
+          <NavLink to={fab.to} className={({ isActive }) => `bn__fab ${isActive ? 'is-active' : ''}`} aria-label="Isi baru">
             <span className="bn__fabshape">
               <Icon name="plus" size={26} stroke={2.8} />
             </span>
-            <span className="bn__faclabel">P2H</span>
+            <span className="bn__faclabel">{fab.label}</span>
           </NavLink>
         )}
         {bottomRight.map((i) => (
           <NavLink key={i.to} to={i.to} end={i.end} className={({ isActive }) => `bn__link ${isActive ? 'is-active' : ''}`}>
             <span className="bn__icon">
               <Icon name={i.icon} size={22} />
-              {!!i.badge && <span className={`badge badge--dot ${openAA ? 'badge--stop' : 'badge--warn'}`}>{i.badge > 9 ? '9+' : i.badge}</span>}
+              {!!i.badge && <span className={`badge badge--dot ${moduleStop ? 'badge--stop' : 'badge--warn'}`}>{i.badge > 9 ? '9+' : i.badge}</span>}
             </span>
             <span>{i.label}</span>
           </NavLink>

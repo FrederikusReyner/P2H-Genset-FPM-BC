@@ -361,6 +361,7 @@ function P2HFormBody({
         // tidak ada sinyal: simpan di HP, kirim otomatis nanti
         await enqueue({
           uuid: st.uuid,
+          user_id: user?.id,
           payload,
           label: `${unit?.code ?? 'P2H'} · Shift ${shiftLabel(st.shift)} · ${shortDate(st.date)}`,
         });
@@ -399,7 +400,7 @@ function P2HFormBody({
           <div className="eyebrow">{mode === 'edit' ? 'Ubah P2H' : 'Form inspeksi harian genset'}</div>
           <h1 className="h1">{mode === 'edit' ? detail?.form.unit_code : 'P2H baru'}</h1>
         </div>
-        <Link to={mode === 'edit' ? `/p2h/${detail?.form.id}` : '/'} className="btn btn--ghost btn--sm">
+        <Link to={mode === 'edit' ? `/p2h/${detail?.form.id}` : '/genset'} className="btn btn--ghost btn--sm">
           <Icon name="x" size={16} /> Batal
         </Link>
       </header>
@@ -950,7 +951,7 @@ function DoneScreen({
             <Icon name="plus" size={18} /> Isi unit lain
           </button>
         )}
-        <Link to="/" className="btn btn--ghost">
+        <Link to="/genset" className="btn btn--ghost">
           Ke beranda
         </Link>
       </div>

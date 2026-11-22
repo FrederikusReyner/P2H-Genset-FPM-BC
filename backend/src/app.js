@@ -14,6 +14,7 @@ import authRoutes from './routes/auth.js';
 import dashboardRoutes from './routes/dashboard.js';
 import exportRoutes from './routes/exports.js';
 import findingsRoutes from './routes/findings.js';
+import formRoutes from './routes/forms.js';
 import metaRoutes from './routes/meta.js';
 import monthlyRoutes from './routes/monthly.js';
 import notificationRoutes from './routes/notifications.js';
@@ -70,6 +71,7 @@ export function createApp() {
   // P2H membawa foto temuan: batasnya lebih besar, tapi hanya untuk yang sudah membawa tanda masuk
   const bigJson = express.json({ limit: '16mb' });
   app.use('/api/p2h', (req, res, next) => (req.headers.authorization ? bigJson(req, res, next) : next()));
+  app.use('/api/forms', (req, res, next) => (req.headers.authorization ? bigJson(req, res, next) : next()));
   app.use(express.json({ limit: '1mb' }));
 
   // batas umum: 900 permintaan per menit per alamat IP (cukup longgar untuk banyak HP di satu jaringan site)
@@ -121,6 +123,7 @@ export function createApp() {
   app.use('/api/photos', photoRoutes);
   app.use('/api/bulanan', monthlyRoutes);
   app.use('/api/exports', exportRoutes);
+  app.use('/api/forms', formRoutes);
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: { code: 'not_found', message: 'Alamat tidak dikenal.' } });

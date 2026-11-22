@@ -22,6 +22,8 @@ export interface User {
   notif_site_ids: number[] | null;
   has_signature: boolean;
   signature_png?: string | null;
+  /** form yang boleh dibuka (kode); null = semua form */
+  form_access?: string[] | null;
 }
 
 export interface Site {
@@ -386,9 +388,220 @@ export interface Notice {
   site_id: number | null;
   unit_id: number | null;
   form_id: number | null;
+  /** alamat halaman (form digital selain P2H Genset) */
+  path?: string | null;
   created_at: string;
   /** kejadian ini dibuat oleh pengguna yang sedang masuk */
   mine: boolean;
+}
+
+/* ---------- form digital serbaguna (tools, arus motor, safety device, ...) ---------- */
+
+export type FormPeriod = 'shift' | 'day' | 'week' | 'biweek' | 'month' | 'quarter' | 'half' | 'none';
+export type BucketKind = 'day' | 'week' | 'biweek' | 'month' | 'quarter' | 'half';
+export type FormSeverity = 'stop' | 'fix' | 'note';
+export type FormItemKind = 'check' | 'measure' | 'input';
+export type FormResult = 'ok' | 'finding' | 'stop';
+
+export interface HeaderField {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea';
+  options?: string[];
+  unit?: string;
+}
+
+export interface FormTypeSummary {
+  code: string;
+  name: string;
+  short_name: string;
+  description: string | null;
+  icon: string;
+  period: FormPeriod;
+  subject_label: string;
+  subjects: number;
+  open_stop: number;
+  open_fix: number;
+  unverified: number;
+  period_label: string | null;
+  done_this_period: number | null;
+}
+
+export interface FormType {
+  id: number;
+  code: string;
+  name: string;
+  short_name: string;
+  description: string | null;
+  icon: string;
+  period: FormPeriod;
+  subject_label: string;
+  header_fields: HeaderField[];
+  fix_hours: number;
+  photo_required: boolean;
+  filler_label: string;
+  verifier_label: string;
+  doc_no: string | null;
+  is_active: boolean;
+  /** kabar ke grup WhatsApp: semua temuan & temuan selesai */
+  wa_findings: boolean;
+  /** kabar ke grup WhatsApp saat diverifikasi (form per shift: rekap per site per shift) */
+  wa_verify: boolean;
+  wa_group_id?: string | null;
+  wa_group_name?: string | null;
+}
+
+export interface FormSubject {
+  id: number;
+  name: string;
+  detail: string | null;
+  site_id: number;
+  site_name: string;
+  is_active: boolean;
+  last_id: number | null;
+  last_date: string | null;
+  last_shift: number | null;
+  last_result: FormResult | null;
+  last_verified: boolean | null;
+  open_stop: number;
+  open_fix: number;
+  done_now: boolean | null;
+  own_items: number;
+}
+
+export interface FormOverview {
+  type: FormType;
+  period: { from: string; to: string; shift: number; label: string } | null;
+  shift: ShiftInfo;
+  settings: { shift1_start: string; shift2_start: string; require_signature: boolean };
+  shared_items: number;
+  subjects: FormSubject[];
+}
+
+export interface FormItem {
+  id: number;
+  section_id: number;
+  sort_order: number;
+  label: string | null;
+  text: string;
+  spec: string | null;
+  kind: FormItemKind;
+  severity: FormSeverity;
+  good_label: string;
+  bad_label: string;
+  input_type: 'text' | 'date' | 'number';
+  fields: { key: string; label: string }[];
+  unit: string | null;
+  min_value: number | null;
+  max_value: number | null;
+  required: boolean;
+  needs_photo: boolean;
+  is_active: boolean;
+}
+
+export interface FormSection {
+  id: number;
+  subject_id: number | null;
+  title: string;
+  note: string | null;
+  sort_order: number;
+  items: FormItem[];
+}
+
+export interface FormRecordListItem {
+  id: number;
+  subject_id: number;
+  subject_name: string;
+  subject_detail: string | null;
+  site_id: number;
+  site_name: string;
+  record_date: string;
+  shift: number;
+  filler_name: string;
+  result: FormResult;
+  n_stop: number;
+  n_fix: number;
+  filled_at: string;
+  verified: boolean;
+  sup_name: string | null;
+  sup_signed_at: string | null;
+}
+
+export interface FormAnswer {
+  id: number;
+  item_id: number | null;
+  item_label: string | null;
+  item_text: string;
+  item_spec: string | null;
+  kind: FormItemKind;
+  severity: FormSeverity;
+  good_label: string | null;
+  bad_label: string | null;
+  unit: string | null;
+  min_value: number | null;
+  max_value: number | null;
+  condition: 'good' | 'bad' | null;
+  values: Record<string, number | string | null> | null;
+  note: string | null;
+  is_finding: boolean;
+  fix_status: FixStatus | null;
+  fix_plan_date: string | null;
+  fix_note: string | null;
+  fix_by_name: string | null;
+  fix_at: string | null;
+  photos: number[];
+  due_at: string | null;
+}
+
+export interface FormRecordDetail {
+  type: FormType;
+  record: FormRecordListItem & {
+    user_id: number;
+    filler_nrp: string | null;
+    header: Record<string, string | number>;
+    notes: string | null;
+    signature_png: string | null;
+    edited_at: string | null;
+    edited_by_name: string | null;
+    sup_nrp: string | null;
+    sup_note: string | null;
+    sup_signature_png: string | null;
+    submitted_at: string;
+  };
+  sections: { title: string; order: number; items: FormAnswer[] }[];
+  permissions: { can_edit: boolean; can_sign: boolean; can_unsign: boolean; can_delete: boolean; can_fix: boolean };
+}
+
+export interface FormFinding {
+  id: number;
+  record_id: number;
+  item_label: string | null;
+  item_text: string;
+  item_spec: string | null;
+  section_title: string;
+  kind: FormItemKind;
+  severity: FormSeverity;
+  bad_label: string | null;
+  unit: string | null;
+  min_value: number | null;
+  max_value: number | null;
+  values: Record<string, number | string | null> | null;
+  note: string | null;
+  fix_status: FixStatus;
+  fix_plan_date: string | null;
+  fix_note: string | null;
+  fix_by_name: string | null;
+  fix_at: string | null;
+  subject_id: number;
+  subject_name: string;
+  site_name: string;
+  record_date: string;
+  shift: number;
+  filler_name: string;
+  seen_at: string;
+  photo_ids: number[];
+  due_at: string | null;
+  overdue: boolean;
 }
 
 export interface UserRow {
@@ -406,6 +619,7 @@ export interface UserRow {
   created_at: string;
   has_signature: boolean;
   devices: number;
+  form_access: string[] | null;
 }
 
 /** Isi yang dikirim saat membuat / mengubah P2H */
@@ -444,9 +658,42 @@ export interface RekapPreview {
   to: string | null;
   title: string;
   subtitle: string;
-  sum: RekapRow & { unverified: number; expected: number; compliance: number | null };
+  sum: RekapRow & { unverified: number; expected: number; compliance: number | null; verify_hours: number | null; close_hours: number | null };
   sites: (RekapRow & { site: string })[];
   bucket_unit: string;
-  buckets: (RekapRow & { label: string })[];
+  bucket_kind: 'day' | 'week' | 'month';
+  buckets: (RekapRow & { label: string; start: string; end: string; expected: number; pct: number | null })[];
   findings: { aa: number; a: number; closed: number; total: number };
+  top_items: { item_text: string; section_title: string; has_stop: boolean; n: number; units: number }[];
+  units: { id: number; name: string; site_name: string; total: number; stop: number; fix: number }[];
+}
+
+export interface FormStats {
+  type: { code: string; short_name: string; period: FormPeriod; fix_hours: number; subject_label: string };
+  range: { from: string; to: string; bucket: 'day' | 'week' | 'month'; days: number };
+  summary: {
+    records: number;
+    with_findings: number;
+    with_stop: number;
+    findings: number;
+    verified: number;
+    unverified: number;
+    verify_hours: number | null;
+    closed: number;
+    close_hours: number | null;
+    open_stop: number;
+    open_fix: number;
+    overdue: number;
+  };
+  trend: { start: string; ok: number; finding: number; stop: number }[];
+  compliance: {
+    kind: BucketKind;
+    per: FormPeriod;
+    subjects: number;
+    expected_per_bucket: number;
+    items: { start: string; done: number; expected: number; pct: number }[];
+  } | null;
+  top_items: { item_text: string; section_title: string; has_stop: boolean; n: number; subjects: number }[];
+  subjects: { id: number; name: string; site_name: string; records: number; stop: number; fix: number }[];
+  sites: { id: number; name: string; records: number; stop: number; fix: number }[];
 }

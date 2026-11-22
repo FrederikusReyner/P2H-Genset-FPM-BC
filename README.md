@@ -44,6 +44,10 @@ Aturan P2H:
 - **Form P2H baru selalu kosong**: tidak ada draf lama yang muncul dan tidak ada angka yang terisi sendiri. Yang terisi hanya data dari pengaturan awal (nama pengisi, tanggal, shift, lokasi, job site). Angka HM terakhir hanya tampil sebagai petunjuk.
 - **Kabar P2H ke grup WhatsApp** (pilihan): rekap P2H tiap site per shift (setelah semua diverifikasi pengawas), STOP AA langsung, dan temuan yang selesai diperbaiki bisa dikabarkan ke grup WhatsApp langsung dari server (gateway sendiri, tanpa pihak ketiga; nomor ditautkan dengan scan QR). Cara memasangnya ada di [`docs/Notifikasi-WhatsApp.md`](docs/Notifikasi-WhatsApp.md).
 
+## Form digital lain
+
+Sesudah masuk, aplikasi membuka layar **Pilih form**: P2H Genset, **Tools & Equipment**, **Pengukuran Arus Motor**, **Safety Device**, **Pengujian Metal Catcher**, **Grounding**, **Jembatan Timbang**, **Pemeriksaan Trafo**, **Oil Trap**, **Panel / MCC**, dan **Terminal Motor**. Semuanya memakai alur yang sama dengan P2H Genset (isi → verifikasi pengawas → temuan dipantau sampai ditutup), admin bisa menambah objek serta butir cek dari menu **Kelola** di tiap form, dan tiap akun bisa dibatasi form mana saja yang boleh dibuka (menu **Pengguna**). Rinciannya di [`docs/Form-Digital.md`](docs/Form-Digital.md).
+
 ## Rekap Excel PMMR dan data bulanan
 
 Menu **Rekap > Rekap PMMR (Excel)**: pilih bulan, tekan **Unduh Excel PMMR**. Hasilnya `PMMR_<tahun>.<bulan>_DATA_GENSET_<site>.xlsx` dengan 4 lembar seperti berkas PMMR yang lama:
