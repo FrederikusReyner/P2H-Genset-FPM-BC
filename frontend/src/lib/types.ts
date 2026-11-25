@@ -445,7 +445,7 @@ export interface FormType {
   is_active: boolean;
   /** kabar ke grup WhatsApp: semua temuan & temuan selesai */
   wa_findings: boolean;
-  /** kabar ke grup WhatsApp saat diverifikasi (form per shift: rekap per site per shift) */
+  /** kabar ke grup WhatsApp saat diverifikasi (bawaan mati; form per shift: rekap per site per shift) */
   wa_verify: boolean;
   wa_group_id?: string | null;
   wa_group_name?: string | null;

@@ -42,7 +42,7 @@ Aturan P2H:
 - Status P2H: **Menunggu verifikasi** -> **Terverifikasi** setelah pengawas (site yang sama, bukan pengisinya) memeriksa dan menandatangani. Setelah Terverifikasi, teknisi tidak bisa mengubahnya.
 - **Rekap** (menu Rekap): pilih **Mingguan, Bulanan, atau Tahunan**, geser periode dengan tombol panah, lihat ringkasan, lalu unduh PDF / Excel / Word.
 - **Form P2H baru selalu kosong**: tidak ada draf lama yang muncul dan tidak ada angka yang terisi sendiri. Yang terisi hanya data dari pengaturan awal (nama pengisi, tanggal, shift, lokasi, job site). Angka HM terakhir hanya tampil sebagai petunjuk.
-- **Kabar P2H ke grup WhatsApp** (pilihan): rekap P2H tiap site per shift (setelah semua diverifikasi pengawas), STOP AA langsung, dan temuan yang selesai diperbaiki bisa dikabarkan ke grup WhatsApp langsung dari server (gateway sendiri, tanpa pihak ketiga; nomor ditautkan dengan scan QR). Cara memasangnya ada di [`docs/Notifikasi-WhatsApp.md`](docs/Notifikasi-WhatsApp.md).
+- **Kabar P2H ke grup WhatsApp** (pilihan): hanya temuan A / STOP AA (langsung saat P2H dikirim) dan temuan yang selesai diperbaiki yang dikabarkan, supaya grup tidak terlalu ramai. Pesan dikirim ke grup WhatsApp langsung dari server (gateway sendiri, tanpa pihak ketiga; nomor ditautkan dengan scan QR). Cara memasangnya ada di [`docs/Notifikasi-WhatsApp.md`](docs/Notifikasi-WhatsApp.md).
 
 ## Form digital lain
 
