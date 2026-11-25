@@ -1,17 +1,36 @@
 # Kabar P2H ke grup WhatsApp
 
-Grup WhatsApp **hanya menerima temuan dan perbaikannya**, supaya tidak terlalu ramai. Rekap per site per shift tidak dikirim lagi.
+Supaya grup tidak terlalu ramai, yang dikirim hanya temuan, perbaikannya, dan **satu rekap ringkas semua site tiap akhir shift** (rekap per site per shift tidak dikirim lagi).
 
 | Pesan | Kapan dikirim |
 |---|---|
 | **Temuan A / STOP AA** | Langsung saat P2H yang ada temuannya dikirim, satu pesan per P2H. Temuan A dan AA di P2H yang sama masuk dalam satu pesan; judulnya "STOP OPERASI" bila ada AA. P2H yang semua baik tidak dikabarkan. |
 | **Temuan selesai** | Saat temuan ditutup di menu Temuan. Kalau itu temuan STOP terakhir di unit itu, judulnya "Boleh jalan lagi". |
+| **Rekap akhir shift** | Sekali tiap shift berakhir (jam ganti shift di Pengaturan), satu pesan untuk semua site: jumlah P2H per site, unit STOP AA / temuan A, dan genset wajib (running / standby) yang belum P2H. Server memeriksa tiap 5 menit dan setiap ada P2H masuk, jadi kalau server sempat tidur, rekap shift terakhir tetap disusulkan. Shift yang berakhir sebelum grup dipilih tidak direkap. |
 
 Aturan lain:
 
 - Kalau P2H diubah dan muncul temuan baru, temuan itu dikabarkan juga.
 - Status "Sedang diperbaiki" dan verifikasi pengawas tidak dikirim ke grup (tetap ada di aplikasi dan notifikasi HP).
 - Form digital lain mengikuti aturan yang sama: bawaannya hanya temuan dan perbaikannya; kabar verifikasi bisa dinyalakan per form di **Kelola > Pengaturan form**.
+
+Contoh rekap akhir shift:
+
+```
+📋 *Rekap P2H Genset · Shift I*
+Selasa, 10 November 2026
+P2H: 21/22 genset · terverifikasi 18
+
+✅ Binungan 5/5
+✅ Suaran 5/5 · 1 STOP
+✅ Gurimbang 4/4 · 1 temuan
+⏳ Lati 3/4
+✅ Sambarata 4/4
+
+🛑 STOP AA: GS-SUA-01
+⚠️ Temuan A: GS-GRB-02
+❌ Belum P2H: GS-LTI-04
+```
 
 Contoh temuan selesai:
 
@@ -86,4 +105,4 @@ Kegagalan kirim WhatsApp tidak mengganggu P2H: P2H tetap tersimpan, dan pemberit
 
 ## Catatan untuk Render paket gratis
 
-Server gratis Render tidur setelah 15 menit tanpa pengunjung. Saat tidur, sambungan WhatsApp ikut tertutup, tetapi P2H juga tidak bisa dikirim, jadi tidak ada temuan yang terlewat. Kabar tidak memakai jadwal: semuanya dipicu oleh kegiatan di aplikasi (P2H dikirim, temuan ditutup), jadi tetap jalan walau server sempat tidur. Saat server bangun, sambungan dibuka lagi otomatis dari sesi di database (tanpa scan ulang). WhatsApp mencabut perangkat tertaut yang tidak online sekitar 14 hari; kalau aplikasi jarang dipakai, cek halaman Pengaturan sesekali.
+Server gratis Render tidur setelah 15 menit tanpa pengunjung. Saat tidur, sambungan WhatsApp ikut tertutup, tetapi P2H juga tidak bisa dikirim, jadi tidak ada temuan yang terlewat. Kabar temuan dipicu oleh kegiatan di aplikasi (P2H dikirim, temuan ditutup). Rekap akhir shift diperiksa tiap 5 menit dan setiap ada P2H masuk, jadi bila server sempat tidur saat shift berakhir, rekapnya keluar begitu server bangun. Saat server bangun, sambungan dibuka lagi otomatis dari sesi di database (tanpa scan ulang). WhatsApp mencabut perangkat tertaut yang tidak online sekitar 14 hari; kalau aplikasi jarang dipakai, cek halaman Pengaturan sesekali.

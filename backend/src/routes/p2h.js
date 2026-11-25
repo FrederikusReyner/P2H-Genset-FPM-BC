@@ -8,6 +8,7 @@ import { cleanParams, PARAMS } from '../params.js';
 import { audit } from '../services/audit.js';
 import { notifyEvent } from '../services/push.js';
 import { getSettings } from '../services/settings.js';
+import { sendShiftSummaryIfDue } from '../services/wa-report.js';
 import { notifyFindingGroup, whatsappReady } from '../services/whatsapp.js';
 import { plain } from '../text.js';
 import { daysBetween, shiftLabel, wita } from '../time.js';
@@ -469,6 +470,8 @@ r.post('/', requireRole(...CAN_FILL), async (req, res) => {
   if (out._notice) {
     const f = out._notice.form;
     fireNotice(f, out._notice.findings, req.user.id);
+    // rekap ringkas shift sebelumnya (bila server sempat tidur saat shift itu berakhir)
+    void sendShiftSummaryIfDue();
     delete out._notice;
   }
   res.status(out.duplicate ? 200 : 201).json(out);
