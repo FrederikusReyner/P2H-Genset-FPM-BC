@@ -131,7 +131,7 @@ function TypeSettings({ t }: { t: FormType }) {
             <input type="checkbox" checked={v.wa_verify} onChange={(e) => setV({ ...v, wa_verify: e.target.checked })} />
             <span>
               Kirim saat diverifikasi{' '}
-              {v.period === 'shift' ? '(satu rekap per site per shift setelah semua isian shift itu terverifikasi)' : '(satu pesan per isian)'}
+              {v.period === 'shift' ? '(satu rekap per site per shift setelah semua isian shift itu terverifikasi)' : '(satu pesan per isian)'}. Bawaannya mati supaya grup tidak terlalu ramai.
             </span>
           </label>
         </Field>

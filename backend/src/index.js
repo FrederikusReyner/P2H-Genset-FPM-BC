@@ -3,6 +3,7 @@ import { bootstrap } from './bootstrap.js';
 import { config } from './config.js';
 import { pool } from './db.js';
 import { initPush } from './services/push.js';
+import { startShiftSummary, stopShiftSummary } from './services/wa-report.js';
 import { initWhatsapp, stopWhatsapp } from './services/whatsapp.js';
 import { state } from './state.js';
 
@@ -23,6 +24,7 @@ async function prepare() {
       state.ready = true;
       console.log('[server] database siap. Server menerima permintaan.');
       void initWhatsapp(); // sesi WhatsApp ada di database, jadi baru bisa disiapkan sekarang
+      startShiftSummary(); // rekap ringkas semua site tiap akhir shift ke grup WhatsApp
       return;
     } catch (err) {
       console.error(`[server] database belum siap (percobaan ${i}/${max}): ${err.message}`);
@@ -37,6 +39,7 @@ prepare();
 function shutdown(sig) {
   console.log(`[server] ${sig}: berhenti…`);
   stopWhatsapp();
+  stopShiftSummary();
   server.close(() => pool.end().finally(() => process.exit(0)));
   setTimeout(() => process.exit(0), 8000).unref();
 }

@@ -77,8 +77,9 @@ Buka form → menu **Kelola**:
 - Grup WhatsApp (bila WhatsApp sudah ditautkan; saklarnya per form di **Kelola > Pengaturan form**):
   - **Grup per form**: nomor WhatsApp cukup ditautkan (scan QR) sekali di Pengaturan. Tiap form bisa mengirim ke grup yang berbeda lewat **Kelola > Pengaturan form > Grup WhatsApp form ini**; bila tidak dipilih, memakai grup utama. Nomor yang ditautkan harus sudah menjadi anggota grup tujuan.
   - **Temuan**: setiap isian yang ada temuannya langsung dikabarkan (STOP dan yang perlu diperbaiki dalam satu pesan), juga saat temuan selesai diperbaiki ("Boleh jalan lagi" bila STOP terakhir di objek itu selesai).
-  - **Verifikasi**: satu pesan per isian yang diverifikasi, berisi hasil, pengisi, pemeriksa, dan rekomendasi.
-  - **Form per shift** (bila ada form yang periodenya diatur "tiap shift" di Kelola): tidak per isian, tetapi **satu rekap per site per shift** setelah semua isian shift itu terverifikasi. Rekap dikirim begitu semua unit sudah diisi dan diverifikasi, atau setelah shift berakhir (unit yang tidak dipakai tidak ditunggu, tercantum sebagai "Tidak diperiksa"). Tiap rekap hanya dikirim sekali.
+  - Bawaannya grup **hanya menerima temuan dan perbaikannya**, supaya tidak terlalu ramai.
+  - **Verifikasi** (bawaan mati, bisa dinyalakan per form): satu pesan per isian yang diverifikasi, berisi hasil, pengisi, pemeriksa, dan rekomendasi.
+  - **Form per shift** (bila ada form yang periodenya diatur "tiap shift" di Kelola dan saklar verifikasinya dinyalakan): tidak per isian, tetapi **satu rekap per site per shift** setelah semua isian shift itu terverifikasi. Rekap dikirim begitu semua unit sudah diisi dan diverifikasi, atau setelah shift berakhir (unit yang tidak dipakai tidak ditunggu, tercantum sebagai "Tidak diperiksa"). Tiap rekap hanya dikirim sekali.
 
 ## Tanpa sinyal di site
 

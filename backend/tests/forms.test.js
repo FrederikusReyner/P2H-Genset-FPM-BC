@@ -292,13 +292,21 @@ describe('Form digital serbaguna', () => {
     assert.equal(subj.done_now, true);
   });
 
-  test('grup WhatsApp: semua temuan, temuan selesai, verifikasi, rekap per shift P2H LV (sekali saja)', async () => {
+  test('grup WhatsApp: temuan & perbaikan (bawaan); verifikasi & rekap per shift hanya bila dinyalakan', async () => {
     const fn = await import('../src/services/form-notify.js');
     const sent = [];
     fn.__setDepsForTest({ ready: () => true, send: async (t) => void sent.push(t) });
+    // bawaan: hanya temuan dan perbaikannya (grup tidak terlalu ramai)
+    for (const code of ['p2h_lv', 'safety_device', 'panel']) {
+      const t = (await api('GET', `/api/forms/${code}`)).json.type;
+      assert.equal(t.wa_findings, true, code);
+      assert.equal(t.wa_verify, false, code);
+    }
+    // saklar verifikasi tetap bisa dinyalakan per form di Kelola
+    await api('PUT', '/api/forms/p2h_lv', { body: { wa_verify: true } });
+    await api('PUT', '/api/forms/safety_device', { body: { wa_verify: true } });
     const lv = (await api('GET', '/api/forms/p2h_lv')).json.type;
     const sd = (await api('GET', '/api/forms/safety_device')).json.type;
-    assert.equal(lv.wa_findings, true);
     assert.equal(lv.wa_verify, true);
 
     // pesan temuan: STOP dan perbaiki dalam satu pesan
@@ -356,7 +364,7 @@ describe('Form digital serbaguna', () => {
     await api('PUT', '/api/forms/safety_device', { body: { wa_verify: false } });
     const sd2 = (await api('GET', '/api/forms/safety_device')).json.type;
     assert.deepEqual(await fn.notifyVerified(sd2, rec.json.id), { ok: false, skipped: true });
-    await api('PUT', '/api/forms/safety_device', { body: { wa_verify: true } });
+    await api('PUT', '/api/forms/p2h_lv', { body: { wa_verify: false } });
   });
 
   test('arus motor: angka di atas arus maks jadi temuan, motor yang mati boleh kosong', async () => {

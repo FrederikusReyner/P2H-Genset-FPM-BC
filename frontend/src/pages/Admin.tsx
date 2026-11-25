@@ -706,7 +706,7 @@ function WhatsappCard() {
 
   return (
     <section className="card">
-      <SectionTitle hint="Rekap P2H tiap site per shift, STOP AA, dan temuan yang selesai diperbaiki">Kabar P2H ke grup WhatsApp</SectionTitle>
+      <SectionTitle hint="Temuan A / AA, perbaikannya, dan rekap ringkas tiap akhir shift">Kabar P2H ke grup WhatsApp</SectionTitle>
       {q.isLoading && <Spinner />}
       {q.error && <ErrorBox error={q.error} onRetry={() => void q.refetch()} />}
       {st && (
@@ -840,11 +840,10 @@ function WhatsappCard() {
             <b>Yang dikirim ke grup:</b>
             <ul className="steps">
               <li>
-                <b>Rekap per site per shift</b>: satu pesan begitu semua genset di site itu sudah di-P2H dan diverifikasi pengawas. Kalau sampai 3 jam setelah shift
-                berakhir belum lengkap, rekap dikirim dengan daftar yang belum.
+                <b>Temuan A dan STOP AA</b>: langsung saat P2H dikirim, satu pesan per P2H yang ada temuannya. P2H yang semua baik tidak dikabarkan.
               </li>
               <li>
-                <b>STOP AA</b>: langsung saat P2H dikirim, tidak menunggu rekap.
+                <b>Rekap akhir shift</b>: satu pesan ringkas untuk semua site, berisi jumlah P2H per site, unit STOP / temuan, dan genset yang belum P2H.
               </li>
               <li>
                 <b>Temuan selesai</b>: saat temuan ditutup, termasuk "Boleh jalan lagi" bila STOP terakhir di unit itu selesai.

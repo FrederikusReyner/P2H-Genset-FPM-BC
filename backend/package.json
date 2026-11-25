@@ -15,8 +15,8 @@
     "keys": "node scripts/gen-keys.js",
     "demo": "node scripts/demo-data.js",
     "test": "node --test tests/api.test.js",
-    "test:wa": "node --test tests/whatsapp.test.js tests/wa-report.test.js",
-    "test:rekap": "node --test tests/wa-report.test.js",
+    "test:wa": "node --test tests/whatsapp.test.js tests/wa-report.test.js tests/wa-shift.test.js",
+    "test:rekap": "node --test tests/wa-report.test.js tests/wa-shift.test.js",
     "test:forms": "node --test tests/forms.test.js"
   },
   "dependencies": {
